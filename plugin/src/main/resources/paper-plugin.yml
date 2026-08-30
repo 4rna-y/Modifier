@@ -1,0 +1,9 @@
+name: Modifier
+version: '${version}'
+main: io.github.modifier.ModifierPlugin
+api-version: '1.21'
+description: Paper プラグイン
+permissions:
+  modifier.admin:
+    description: 設定の確認とリロード
+    default: op
