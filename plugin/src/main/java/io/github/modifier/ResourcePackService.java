@@ -30,11 +30,12 @@ public final class ResourcePackService {
                     "resource-pack.enabled が false のため、パックを配りません。");
             return;
         }
+        String publicBaseUrl = plugin.getConfig().getString("resource-pack.public-base-url", "");
         String advertised = plugin.getConfig().getString("resource-pack.host", "127.0.0.1");
         String bind = plugin.getConfig().getString("resource-pack.bind", "0.0.0.0");
         int port = plugin.getConfig().getInt("resource-pack.port", 8123);
         try {
-            this.host = ResourcePackHost.start(plugin, advertised, bind, port);
+            this.host = ResourcePackHost.start(plugin, publicBaseUrl, advertised, bind, port);
             plugin.getSLF4JLogger().info("リソースパックを配信します: {} ({} bytes, sha1 {})",
                     host.uri(), host.sizeBytes(), host.sha1());
         } catch (IOException e) {

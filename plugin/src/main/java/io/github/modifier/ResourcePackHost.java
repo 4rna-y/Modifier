@@ -49,8 +49,19 @@ public final class ResourcePackHost implements AutoCloseable {
      * @param bind           待ち受けるアドレス
      * @throws IOException 同梱パックが無い、または待ち受けに失敗した
      */
-    public static ResourcePackHost start(ModifierPlugin plugin, String advertisedHost,
-            String bind, int port) throws IOException {
+    /**
+     * 配信を始める。
+     *
+     * @param publicBaseUrl クライアントへ知らせる URL の先頭。空なら
+     *                      {@code http://<advertisedHost>:<port>} を組み立てる。
+     *                      リバースプロキシの裏で HTTPS にする場合や、ポートを
+     *                      URL に出したくない場合にここを指定する
+     * @param advertisedHost {@code publicBaseUrl} が空のときに使うホスト名
+     * @param bind           待ち受けるアドレス
+     * @param port           待ち受けるポート
+     */
+    public static ResourcePackHost start(ModifierPlugin plugin, String publicBaseUrl,
+            String advertisedHost, String bind, int port) throws IOException {
         byte[] zip;
         try (InputStream in = plugin.getResource(BUNDLED)) {
             if (in == null) {
@@ -84,8 +95,22 @@ public final class ResourcePackHost implements AutoCloseable {
         }));
         server.start();
 
-        URI uri = URI.create("http://" + advertisedHost + ":" + port + path);
+        URI uri = URI.create(publicUrlPrefix(publicBaseUrl, advertisedHost, port) + path);
         return new ResourcePackHost(zip, sha1, uri, server);
+    }
+
+    /**
+     * クライアントへ知らせる URL の、パスより手前の部分。
+     *
+     * <p>{@code publicBaseUrl} を指定したときはそれをそのまま使う。末尾の {@code /} は
+     * パスの先頭の {@code /} と重ならないよう落とす。指定が無ければ、待ち受けている
+     * ホストとポートから素直に組み立てる。
+     */
+    static String publicUrlPrefix(String publicBaseUrl, String advertisedHost, int port) {
+        if (publicBaseUrl != null && !publicBaseUrl.isBlank()) {
+            return publicBaseUrl.strip().replaceAll("/+$", "");
+        }
+        return "http://" + advertisedHost + ":" + port;
     }
 
     public UUID id() {
