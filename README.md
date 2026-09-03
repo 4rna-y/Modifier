@@ -23,9 +23,27 @@ Minecraft Paper 用プラグイン。
 
 ## コマンド
 
-`/modifier <status|select|reload>` — 権限 `modifier.admin` (既定: OP)
+`/modifier` — 別名 `/m`
 
-- `status` — バージョン・`enabled`・登録数・自分の選択状況を表示
+### 引数なし: 自分のモディファイアを見る
+
+権限 `modifier.use` (既定: 全員)。実行した本人のチャットに、選んでいるモディファイアの
+名前とその効果の説明を返す。
+
+```
+[Modifier] 選択中: 肥満
+  移動速度が下がる
+  ノックバックを受けにくい
+```
+
+まだ選んでいなければその旨だけを返す。選んだ id が登録から消えている場合 (ビルドや
+config を差し替えたとき) は、その id を添えて知らせる。
+
+### サブコマンド: 管理用
+
+権限 `modifier.admin` (既定: OP)。`/m status` のように別名からも使える。
+
+- `status` — バージョン・`enabled`・登録数・自分の選択状況・パック配信・各アイコンと重み
 - `select` — 選択画面を開く (動作確認用)
 - `reload` — `config.yml` を再読み込み
 
@@ -33,13 +51,13 @@ Minecraft Paper 用プラグイン。
 
 ### 遊ぶサーバーを立てる
 
-**`wiah` と一緒に動かす本番相当のサーバーは、親ディレクトリの `start.sh` で起動する。**
+**`wiah` / `death_counter` と一緒に動かす本番相当のサーバーは、親ディレクトリの `start.sh` で起動する。**
 
 ```console
 $ cd .. && ./start.sh
 ```
 
-2つのプラグインと mstore をビルドし、`Modifier/run/plugins` へ配置してから
+3つのプラグインと mstore をビルドし、`Modifier/run/plugins` へ配置してから
 mstore 経由で起動する。mstore が Paper を子プロセスとして抱え、同じプロセスで
 KV ストア (`http://127.0.0.1:8080`) も動かすので、これ1つで両方が上がる。
 

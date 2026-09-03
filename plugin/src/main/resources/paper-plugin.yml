@@ -4,6 +4,9 @@ main: io.github.modifier.ModifierPlugin
 api-version: '1.21'
 description: Paper プラグイン
 permissions:
+  modifier.use:
+    description: 自分が選んだモディファイアの確認 (/m)
+    default: true
   modifier.admin:
-    description: 設定の確認とリロード
+    description: 設定の確認とリロード (/m status|select|reload)
     default: op
