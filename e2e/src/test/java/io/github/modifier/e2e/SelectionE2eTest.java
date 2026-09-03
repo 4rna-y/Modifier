@@ -257,11 +257,19 @@ class SelectionE2eTest {
 
         var jump = result.first("double_jump").orElseThrow(
                 () -> new AssertionError("ジャンプを観測できていない" + result.describe()));
-        double climbed = Double.parseDouble(jump.field("climbed").orElse("0"));
-        assertTrue(climbed > 0.5,
-                "空中で飛行を切り替えても上向きの速度が付かない。"
+        // 着地してから送っていたら発動条件から外れる。観測そのものが無意味なので、
+        // 速度より先にここで落とす。
+        assertTrue(jump.has("airborne", "true"),
+                "滞空中に飛行トグルを送れていない。この観測では二段ジャンプを判定できない"
+                        + result.describe());
+        // ボットの位置ではなく、サーバーが送ってきた速度で見る。mineflayer は自分の
+        // 位置をクライアント側で予測していて、自分あての entity_velocity を取り込まない。
+        // 速度を与えられてもボットの座標は落下したままになるので、座標では判定できない。
+        double launched = Double.parseDouble(jump.field("launchedY").orElse("0"));
+        assertTrue(launched > 0.5,
+                "空中で飛行を切り替えてもサーバーが上向きの速度を与えていない。"
                         + "PlayerToggleFlightEvent が飛んでいない可能性がある。"
-                        + "切り替えた後に登った高さ: " + climbed + result.describe());
+                        + "与えられた上向きの速度: " + launched + result.describe());
     }
 
     @Test

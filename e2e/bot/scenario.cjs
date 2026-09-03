@@ -328,6 +328,11 @@ const SCENARIOS = {
    *
    * <p>空中で飛行を切り替えると、サーバーが打ち消して上向きの速度を与えるはず。
    * mineflayer から飛行トグルのパケットを直接送って確かめる。
+   *
+   * <p><b>位置では観測できない。</b> mineflayer は自分の位置をクライアント側で
+   * 予測していて、自分あての {@code entity_velocity} を取り込まない。サーバーが
+   * 速度を与えても、ボットの {@code entity.position} は落下したままになる。
+   * そこで、サーバーが送ってきた速度そのものを観測する。
    */
   async effect_double_jump() {
     const bot = await connect('E2eJumper');
@@ -338,23 +343,43 @@ const SCENARIOS = {
     }
     await sleep(2000);
 
+    // トグルを送った後、自分あてに来た最初の速度を捕まえる。
+    // 周りのモブのぶんも同じパケットで飛んでくるので、entityId で自分に絞る。
+    let toggled = false;
+    let launched = null;
+    bot._client.on('entity_velocity', (packet) => {
+      if (toggled && launched === null && packet.entityId === bot.entity.id) {
+        launched = packet.velocity;
+      }
+    });
+
     // 1回目のジャンプで浮く
     bot.setControlState('jump', true);
-    await sleep(300);
+    await sleep(150);
     bot.setControlState('jump', false);
-    await sleep(300);
 
-    // 速度はクライアント側の予測で濁るので、実際に登った高さで見る
-    const beforeY = bot.entity.position.y;
-    // 空中で飛行トグル (クライアントが「飛ぼうとした」と申告する)
-    bot._client.write('abilities', { flags: 2 });   // serverbound は flags のみ
-
-    let peak = beforeY;
-    for (let i = 0; i < 20; i++) {
-      await sleep(100);
-      peak = Math.max(peak, bot.entity.position.y);
+    // 頂点を過ぎて落ち始めるまで待つ。
+    //
+    // ここを固定の待ち時間にすると、普通のジャンプの往復 (約 0.6 秒) と競り合って
+    // 「着地してからトグルを送る」ことになり、二段ジャンプの発動条件から外れる。
+    let airborne = false;
+    for (let i = 0; i < 40; i++) {
+      if (!bot.entity.onGround && bot.entity.velocity.y < 0) {
+        airborne = true;
+        break;
+      }
+      await sleep(25);
     }
-    emit('double_jump', { beforeY, peakY: peak, climbed: peak - beforeY });
+
+    // 空中で飛行トグル (クライアントが「飛ぼうとした」と申告する)
+    toggled = true;
+    bot._client.write('abilities', { flags: 2 });   // serverbound は flags のみ
+    await sleep(1000);
+
+    emit('double_jump', {
+      airborne,
+      launchedY: launched === null ? 0 : launched.y,
+    });
     bot.quit();
   },
 
