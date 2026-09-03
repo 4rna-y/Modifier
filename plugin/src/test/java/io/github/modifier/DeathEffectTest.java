@@ -122,6 +122,13 @@ class DeathEffectTest {
             assertEquals(1, victim.state().teleports.size(), "死亡地点へ引きずり込まれる");
             assertEquals(50, victim.state().teleports.get(0).getX(), 1e-9);
             assertEquals(10.0, me.state().health, 1e-9, "自分は最大 HP の半分で蘇る");
+            // 両者の耳元で専用の効果音が鳴る
+            for (Mocks.FakePlayer target : java.util.List.of(me, victim)) {
+                org.mockito.Mockito.verify(target.player()).playSound(
+                        org.mockito.ArgumentMatchers.argThat(
+                                (net.kyori.adventure.sound.Sound sound) ->
+                                        sound.name().equals(ReaperRouletteModifier.SOUND)));
+            }
         }
 
         @Test

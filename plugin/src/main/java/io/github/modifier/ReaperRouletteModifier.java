@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import net.kyori.adventure.key.Key;
+import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.GameMode;
@@ -21,6 +23,12 @@ import org.bukkit.event.entity.EntityDamageEvent;
  * <p>他のプレイヤーが誰も居なければ発動せず、普通に死ぬ (チャージは温存される)。
  */
 public final class ReaperRouletteModifier extends BaseModifier {
+
+    /**
+     * 発動時に鳴らす音。リソースパックの {@code assets/modifier/sounds.json} に同名で登録してある。
+     * パックを適用していないクライアントでは何も鳴らない。
+     */
+    public static final Key SOUND = Key.key("modifier", "reaper_roulette");
 
     /** 巻き込まれた側の HP の下限。死なせはしない。 */
     public static final double VICTIM_MIN_HEALTH = 1.0;
@@ -71,6 +79,10 @@ public final class ReaperRouletteModifier extends BaseModifier {
                 "死神のルーレットに巻き込まれた……", NamedTextColor.DARK_RED));
         self.sendMessage(Component.text(
                 victim.getName() + " が身代わりに引きずり込まれた。", NamedTextColor.DARK_RED));
+        // 助かった側と巻き込まれた側の両方に、それぞれの耳元で鳴らす
+        Sound sound = Sound.sound(SOUND, Sound.Source.PLAYER, 1.0f, 1.0f);
+        self.playSound(sound);
+        victim.playSound(sound);
         return true;
     }
 

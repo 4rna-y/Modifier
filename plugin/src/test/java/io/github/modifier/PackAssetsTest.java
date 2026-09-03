@@ -80,6 +80,23 @@ class PackAssetsTest {
     }
 
     @org.junit.jupiter.api.Test
+    @DisplayName("死神ルーレットの効果音がパックに揃っている")
+    void reaperRouletteSoundIsBundled() throws Exception {
+        File packDir = packDir();
+        Key sound = ReaperRouletteModifier.SOUND;
+        File ogg = new File(packDir,
+                "assets/" + sound.namespace() + "/sounds/" + sound.value() + ".ogg");
+        File definition = new File(packDir, "assets/" + sound.namespace() + "/sounds.json");
+        assertTrue(ogg.isFile(), "音声が無い: " + ogg);
+        assertTrue(definition.isFile(), "sounds.json が無い: " + definition);
+        String json = java.nio.file.Files.readString(definition.toPath());
+        assertTrue(json.contains("\"" + sound.value() + "\""),
+                "sounds.json に " + sound.value() + " が登録されていない");
+        assertTrue(json.contains("\"" + sound.asString() + "\""),
+                "sounds.json が " + sound.asString() + " のファイルを指していない");
+    }
+
+    @org.junit.jupiter.api.Test
     @DisplayName("pack.mcmeta が 26.2 の pack_format を宣言している")
     void packFormatMatchesTheServer() throws Exception {
         File mcmeta = new File(packDir(), "pack.mcmeta");
