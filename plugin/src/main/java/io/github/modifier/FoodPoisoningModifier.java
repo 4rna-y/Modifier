@@ -32,7 +32,7 @@ public final class FoodPoisoningModifier extends BaseModifier {
     @Override
     public int weight() {
         // 食事のたび 75%。上振れが無く、しかも食べないわけにいかないので回避もできない。
-        return 5;
+        return 4;
     }
 
     @Override

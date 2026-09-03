@@ -30,8 +30,8 @@ public final class LandmineModifier extends BaseModifier {
 
     @Override
     public int weight() {
-        // 弓限定で満腹度が対価。自分にも当たるので暴走しにくい。
-        return 8;
+        // 弓限定で満腹度が対価。爆発は近くの味方にも当たるので、標準より下げる。
+        return 5;
     }
 
     @Override

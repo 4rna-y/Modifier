@@ -40,6 +40,7 @@ class DispatchTest {
     private ModifierPlugin plugin;
     private SelectionStore store;
     private ModifierRegistry registry;
+    private NameTagDisplay nameTag;
 
     @BeforeEach
     void setUp() {
@@ -54,10 +55,11 @@ class DispatchTest {
         store = mock(SelectionStore.class);
         when(store.chargeAvailable(org.mockito.ArgumentMatchers.any())).thenReturn(true);
         registry = new ModifierRegistry();
+        nameTag = mock(NameTagDisplay.class);
     }
 
     private ModifierEffects effects(Random random) {
-        return new ModifierEffects(plugin, registry, store, random);
+        return new ModifierEffects(plugin, registry, store, random, nameTag);
     }
 
     /** そのプレイヤーが選んでいることにする。 */
@@ -118,6 +120,102 @@ class DispatchTest {
             SyntheticDamage.run(() -> effects(new Random(0)).onDamage(event));
             assertEquals(10.0, event.getDamage(), 1e-9,
                     "効果由来のダメージがまた効果を誘発してはいけない");
+        }
+    }
+
+    @Nested
+    @DisplayName("新しいフックの振り分け")
+    class NewHooks {
+
+        /** 呼ばれた回数を数える見張り役。 */
+        private final class Recording extends BaseModifier {
+            final AtomicInteger crafts = new AtomicInteger();
+            final AtomicInteger clicks = new AtomicInteger();
+            final AtomicInteger interacts = new AtomicInteger();
+
+            Recording() {
+                super("recording", "記録", Material.PAPER, "");
+            }
+
+            @Override
+            public void onCraftPrepared(Player player, org.bukkit.event.inventory.PrepareItemCraftEvent e) {
+                crafts.incrementAndGet();
+            }
+
+            @Override
+            public void onInventoryClick(Player player, org.bukkit.event.inventory.InventoryClickEvent e) {
+                clicks.incrementAndGet();
+            }
+
+            @Override
+            public void onInteract(Player player, org.bukkit.event.player.PlayerInteractEvent e) {
+                interacts.incrementAndGet();
+            }
+        }
+
+        private org.bukkit.inventory.InventoryView viewOf(Mocks.FakePlayer player) {
+            org.bukkit.inventory.InventoryView view = mock(org.bukkit.inventory.InventoryView.class);
+            when(view.getPlayer()).thenReturn(player.player());
+            when(view.getTopInventory()).thenReturn(mock(org.bukkit.inventory.CraftingInventory.class));
+            return view;
+        }
+
+        @Test
+        @DisplayName("クラフト・クリック・操作は選んでいる人にだけ届く")
+        void routesToTheSelected() {
+            Recording recording = new Recording();
+            registry.register(recording);
+            selects(me, recording);
+            Mocks.FakePlayer other = Mocks.player("Other", server, world);
+            selectsNothing(other);
+            ModifierEffects effects = effects(new Random(0));
+
+            for (Mocks.FakePlayer player : List.of(me, other)) {
+                effects.onCraftPrepared(new org.bukkit.event.inventory.PrepareItemCraftEvent(
+                        mock(org.bukkit.inventory.CraftingInventory.class), viewOf(player), false));
+                effects.onInventoryClick(new org.bukkit.event.inventory.InventoryClickEvent(
+                        viewOf(player), org.bukkit.event.inventory.InventoryType.SlotType.RESULT, 0,
+                        org.bukkit.event.inventory.ClickType.LEFT,
+                        org.bukkit.event.inventory.InventoryAction.PICKUP_ALL));
+                effects.onInteract(new org.bukkit.event.player.PlayerInteractEvent(player.player(),
+                        org.bukkit.event.block.Action.RIGHT_CLICK_AIR, null, null, org.bukkit.block.BlockFace.UP));
+            }
+
+            assertEquals(1, recording.crafts.get());
+            assertEquals(1, recording.clicks.get());
+            assertEquals(1, recording.interacts.get());
+        }
+
+        @Test
+        @DisplayName("シェフの料理は、選んでいない人が食べても効く")
+        void chefDishesWorkForEveryone() {
+            Mocks.makeEdible(Material.BREAD);
+            selectsNothing(me);
+            ItemStack dish = ChefModifier.cook(Mocks.stampableItem(Material.BREAD, 1),
+                    ChefModifier.BUFFS.get(0));
+
+            effects(new Random(0)).onConsume(new org.bukkit.event.player.PlayerItemConsumeEvent(
+                    me.player(), dish, org.bukkit.inventory.EquipmentSlot.HAND));
+
+            assertFalse(me.state().potionEffects.isEmpty(), "料理の効果はアイテムに付いている");
+        }
+
+        @Test
+        @DisplayName("掛け直すたびに下段の表示も更新する")
+        void refreshesTheNameTag() {
+            Modifier fat = new FatModifier();
+            registry.register(fat);
+            when(me.player().getScheduler()).thenReturn(
+                    mock(io.papermc.paper.threadedregions.scheduler.EntityScheduler.class));
+            ModifierEffects effects = effects(new Random(0));
+
+            selects(me, fat);
+            effects.apply(me.player());
+            org.mockito.Mockito.verify(nameTag).show(me.player(), fat);
+
+            selectsNothing(me);
+            effects.apply(me.player());
+            org.mockito.Mockito.verify(nameTag).hide(me.player());
         }
     }
 

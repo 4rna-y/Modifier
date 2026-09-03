@@ -24,7 +24,10 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityExhaustionEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerHarvestBlockEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -54,17 +57,20 @@ public final class ModifierEffects implements Listener {
     private final SelectionStore store;
     /** 救済できる者が複数居るときの順番を決める。テストから固定できるよう受け取る。 */
     private final Random random;
+    /** ネームタグの下段の表示。選択に合わせて {@link #apply} が更新する。 */
+    private final NameTagDisplay nameTag;
 
     /** 今そのプレイヤーへ実際に掛けてあるもの。付け替えのときに外す相手を知るために持つ。 */
     private final Map<UUID, Modifier> applied = new HashMap<>();
     private final Map<UUID, ScheduledTask> tickTasks = new HashMap<>();
 
     public ModifierEffects(ModifierPlugin plugin, ModifierRegistry registry, SelectionStore store,
-            Random random) {
+            Random random, NameTagDisplay nameTag) {
         this.plugin = plugin;
         this.registry = registry;
         this.store = store;
         this.random = random;
+        this.nameTag = nameTag;
     }
 
     /** そのプレイヤーが今選んでいるモディファイア。 */
@@ -85,11 +91,13 @@ public final class ModifierEffects implements Listener {
         }
         if (next.isEmpty()) {
             stopTicking(player);
+            nameTag.hide(player);
             return;
         }
         next.get().apply(player);
         applied.put(player.getUniqueId(), next.get());
         startTicking(player);
+        nameTag.show(player, next.get());
     }
 
     /** 掛けてあるものを外す。 */
@@ -241,6 +249,8 @@ public final class ModifierEffects implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onConsume(PlayerItemConsumeEvent event) {
         Player player = event.getPlayer();
+        // シェフの料理は、食べた人が何を選んでいようと効く
+        ChefModifier.serve(player, event.getItem());
         active(player).ifPresent(modifier -> modifier.onConsume(player, event));
     }
 
@@ -279,6 +289,28 @@ public final class ModifierEffects implements Listener {
     public void onToggleFlight(PlayerToggleFlightEvent event) {
         Player player = event.getPlayer();
         active(player).ifPresent(modifier -> modifier.onToggleFlight(player, event));
+    }
+
+    @EventHandler
+    public void onCraftPrepared(PrepareItemCraftEvent event) {
+        if (event.getView().getPlayer() instanceof Player player) {
+            active(player).ifPresent(modifier -> modifier.onCraftPrepared(player, event));
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (event.getWhoClicked() instanceof Player player) {
+            active(player).ifPresent(modifier -> modifier.onInventoryClick(player, event));
+        }
+    }
+
+    // 保護プラグインが右クリックを止めた場合 (useInteractedBlock が DENY) は
+    // キャンセル扱いになるので、その操作には配らない
+    @EventHandler(ignoreCancelled = true)
+    public void onInteract(PlayerInteractEvent event) {
+        Player player = event.getPlayer();
+        active(player).ifPresent(modifier -> modifier.onInteract(player, event));
     }
 
     @EventHandler

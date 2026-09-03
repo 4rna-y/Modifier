@@ -24,7 +24,7 @@ public final class BlackSwordsmanModifier extends BaseModifier {
     @Override
     public int weight() {
         // 対モブ限定の吸収。生存に効くが上限がある。
-        return 8;
+        return 6;
     }
 
     @Override

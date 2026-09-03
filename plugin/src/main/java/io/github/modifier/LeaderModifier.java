@@ -36,7 +36,7 @@ public final class LeaderModifier extends BaseModifier {
     @Override
     public int weight() {
         // 自分にも掛かるが、価値は周りに人が居てこそ。ソロだと空腹付きの微妙な自己バフ。
-        return 5;
+        return 4;
     }
 
     @Override

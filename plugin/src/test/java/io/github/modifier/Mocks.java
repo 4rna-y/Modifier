@@ -102,6 +102,35 @@ final class Mocks {
         when(stack.getType()).thenReturn(type);
         when(stack.getAmount()).thenReturn(amount);
         when(stack.clone()).thenReturn(stack);
+        // 印の無いアイテム。読み出しは全て「無い」と答える
+        when(stack.getPersistentDataContainer()).thenReturn(
+                mock(org.bukkit.persistence.PersistentDataContainer.class));
+        return stack;
+    }
+
+    /**
+     * 印 (PDC) と名前・説明を持てるアイテム。
+     *
+     * <p>{@code setItemMeta} 経由で書いた PDC の文字列が、{@code getPersistentDataContainer}
+     * から読める。名前と説明は {@code getItemMeta()} の Mockito 記録で確かめる。
+     */
+    static ItemStack stampableItem(Material type, int amount) {
+        ItemStack stack = itemStack(type, amount);
+        Map<NamespacedKey, String> strings = new HashMap<>();
+        org.bukkit.persistence.PersistentDataContainer container =
+                mock(org.bukkit.persistence.PersistentDataContainer.class);
+        org.mockito.Mockito.doAnswer(i -> {
+            strings.put(i.getArgument(0), i.getArgument(2));
+            return null;
+        }).when(container).set(any(), org.mockito.ArgumentMatchers.eq(
+                org.bukkit.persistence.PersistentDataType.STRING), org.mockito.ArgumentMatchers.anyString());
+        when(container.get(any(), org.mockito.ArgumentMatchers.eq(
+                org.bukkit.persistence.PersistentDataType.STRING)))
+                .thenAnswer(i -> strings.get((NamespacedKey) i.getArgument(0)));
+        org.bukkit.inventory.meta.ItemMeta meta = mock(org.bukkit.inventory.meta.ItemMeta.class);
+        when(meta.getPersistentDataContainer()).thenReturn(container);
+        when(stack.getItemMeta()).thenReturn(meta);
+        when(stack.getPersistentDataContainer()).thenReturn(container);
         return stack;
     }
 

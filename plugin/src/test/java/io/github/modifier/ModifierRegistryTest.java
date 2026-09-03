@@ -24,15 +24,16 @@ class ModifierRegistryTest {
             mock(Plugin.class), new SelectionStore(mock(Server.class)), new Random(0));
 
     @Test
-    @DisplayName("仕様どおり16種が登録されている")
-    void allSixteenAreRegistered() {
-        assertEquals(16, registry.all().size());
+    @DisplayName("仕様どおり19種が登録されている")
+    void allNineteenAreRegistered() {
+        assertEquals(19, registry.all().size());
         Set<String> ids = new HashSet<>(registry.all().stream().map(Modifier::id).toList());
         for (String id : new String[] {
                 "fat", "swiftness_boots", "shield_bash",
                 "aho", "serf", "dopagaki", "reaper_roulette", "sneer",
                 "black_swordsman", "landmine", "healer", "food_poisoning",
-                "clown", "insomnia", "leader", "nokya"}) {
+                "clown", "insomnia", "leader", "nokya",
+                "chef", "regret", "diva"}) {
             assertTrue(ids.contains(id), id + " が登録されていない");
         }
     }
@@ -104,6 +105,18 @@ class ModifierRegistryTest {
     }
 
     @Test
+    @DisplayName("なにもしない後悔が一番よく出る")
+    void regretIsTheMostCommon() {
+        int regret = registry.byId("regret").orElseThrow().weight();
+        for (Modifier modifier : registry.all()) {
+            if (!modifier.id().equals("regret")) {
+                assertTrue(modifier.weight() < regret,
+                        modifier.id() + " の重み " + modifier.weight() + " が後悔 " + regret + " 以上ある");
+            }
+        }
+    }
+
+    @Test
     @DisplayName("重みが 0 以下の登録は弾く")
     void rejectsNonPositiveWeights() {
         Modifier never = new BaseModifier("never", "出ない", org.bukkit.Material.STONE, "x") {
@@ -128,11 +141,11 @@ class ModifierRegistryTest {
             }
         }
 
-        // 一番軽い無キャ (2) と、一番重いデブ (9) の差は 4 倍以上あるはず
+        // 一番軽い無キャ (2) と、一番重い後悔 (10) の差は 5 倍あるはず
         int lightest = hits.getOrDefault("nokya", 0);
-        int heaviest = hits.getOrDefault("fat", 0);
+        int heaviest = hits.getOrDefault("regret", 0);
         assertTrue(heaviest > lightest * 3,
-                "重みが抽選に効いていない。無キャ " + lightest + " 回に対してデブ " + heaviest + " 回");
+                "重みが抽選に効いていない。無キャ " + lightest + " 回に対して後悔 " + heaviest + " 回");
 
         // 重みの順序が出現数の順序としておおむね保たれていること
         for (Modifier modifier : registry.all()) {

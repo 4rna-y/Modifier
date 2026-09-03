@@ -51,7 +51,7 @@ public final class ClownModifier extends BaseModifier {
     @Override
     public int weight() {
         // 20% が5種。運が全部悪い方へ転ぶ日があるので気持ち下げる。
-        return 7;
+        return 5;
     }
 
     @Override

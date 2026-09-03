@@ -27,7 +27,7 @@ public final class FatModifier extends BaseModifier {
     @Override
     public int weight() {
         // 被ダメ -25% は強いが移動 -30% も本当に痛い。取引が明快で引いて不快でない。
-        return 9;
+        return 8;
     }
 
     @Override

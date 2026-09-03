@@ -13,7 +13,10 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExhaustionEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerHarvestBlockEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
@@ -57,7 +60,7 @@ public interface Modifier {
      * 3択に出る重み。大きいほど出やすい。
      *
      * <p>出現率は「自分の重み ÷ 全体の重み」で決まるので、絶対値ではなく比だけが効く。
-     * 組み込みの16種は合計 100 に揃えてあり、重みがそのまま相対的な出やすさになる
+     * 組み込みの19種は合計 100 に揃えてあり、重みがそのまま相対的な出やすさになる
      * (実際の出現率は3つ引くぶん、これより高くなる)。
      *
      * <p>強さではなく「引いた人以外への影響」で決めている。とくに死を打ち消すものは
@@ -151,6 +154,23 @@ public interface Modifier {
 
     /** 飛行の切り替えを試みたとき。二段ジャンプの実装に使う。 */
     default void onToggleFlight(Player player, PlayerToggleFlightEvent event) {
+    }
+
+    /**
+     * クラフトの完成品が組まれたとき (作業台・手持ちのクラフト)。
+     *
+     * <p>プレビューの段階なので、ここで完成品を差し替えると実際に作られる物も変わる。
+     * シフトクリックで連続して作る間は1個ごとに呼ばれる。
+     */
+    default void onCraftPrepared(Player player, PrepareItemCraftEvent event) {
+    }
+
+    /** インベントリのスロットをクリックしたとき。かまどの完成品の取り出しなどに使う。 */
+    default void onInventoryClick(Player player, InventoryClickEvent event) {
+    }
+
+    /** ブロックや空中を左右クリックしたとき。右クリックは両手ぶん飛んでくる。 */
+    default void onInteract(Player player, PlayerInteractEvent event) {
     }
 
     /** 定期的に呼ばれる。接地判定など、イベントで拾えないものに使う。 */

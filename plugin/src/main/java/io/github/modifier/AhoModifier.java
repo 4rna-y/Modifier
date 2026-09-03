@@ -26,7 +26,7 @@ public final class AhoModifier extends BaseModifier {
     @Override
     public int weight() {
         // 採掘 -70% と耐久3倍が重く、落下軽減が見合っていない。
-        return 7;
+        return 5;
     }
 
     @Override

@@ -36,7 +36,7 @@ public final class SwiftnessBootsModifier extends BaseModifier {
     @Override
     public int weight() {
         // 満腹度 +20% が実質的な対価になっている。
-        return 8;
+        return 6;
     }
 
     @Override

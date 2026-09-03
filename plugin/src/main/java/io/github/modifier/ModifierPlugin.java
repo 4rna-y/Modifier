@@ -1,5 +1,7 @@
 package io.github.modifier;
 
+import java.util.List;
+
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -16,6 +18,7 @@ public final class ModifierPlugin extends JavaPlugin {
     private SelectionStore store;
     private ResourcePackService resourcePack;
     private ModifierEffects effects;
+    private NameTagDisplay nameTag;
 
     @Override
     public void onEnable() {
@@ -31,7 +34,8 @@ public final class ModifierPlugin extends JavaPlugin {
         java.util.Random random = new java.util.Random();
         this.store = new SelectionStore(getServer());
         this.registry = ModifierRegistry.withBuiltins(this, store, random);
-        this.effects = new ModifierEffects(this, registry, store, random);
+        this.nameTag = new NameTagDisplay(getServer());
+        this.effects = new ModifierEffects(this, registry, store, random, nameTag);
         this.selection = new SelectionService(this, registry, store, effects, random);
         this.resourcePack = new ResourcePackService(this);
         resourcePack.start();
@@ -41,8 +45,8 @@ public final class ModifierPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(effects, this);
 
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event ->
-                event.registrar().register("modifier", "Modifier の管理コマンド",
-                        new ModifierCommand(this)));
+                event.registrar().register("modifier", "自分のモディファイアの確認と管理",
+                        List.of("m"), new ModifierCommand(this)));
     }
 
     public ModifierRegistry registry() {
@@ -70,6 +74,9 @@ public final class ModifierPlugin extends JavaPlugin {
         if (effects != null) {
             effects.clearAll();
         }
+        if (nameTag != null) {
+            nameTag.shutdown();
+        }
         if (resourcePack != null) {
             resourcePack.stop();
         }
@@ -79,5 +86,11 @@ public final class ModifierPlugin extends JavaPlugin {
     public Component message(String miniMessage) {
         String prefix = getConfig().getString("message-prefix", DEFAULT_MESSAGE_PREFIX);
         return MiniMessage.miniMessage().deserialize(prefix + miniMessage);
+    }
+
+    /** 組み立て済みの本文に接頭辞だけ付ける。MiniMessage として解釈し直さない。 */
+    public Component message(Component body) {
+        String prefix = getConfig().getString("message-prefix", DEFAULT_MESSAGE_PREFIX);
+        return MiniMessage.miniMessage().deserialize(prefix).append(body);
     }
 }

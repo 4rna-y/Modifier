@@ -23,7 +23,7 @@ public final class InsomniaModifier extends BaseModifier {
     @Override
     public int weight() {
         // 純粋な下方修正だが、寝なければ避けられる。食中毒より軽い。
-        return 6;
+        return 5;
     }
 
     @Override

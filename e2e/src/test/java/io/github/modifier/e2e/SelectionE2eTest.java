@@ -74,10 +74,10 @@ class SelectionE2eTest {
 
     @Test
     @Order(1)
-    @DisplayName("本番の jar が 26.1 のサーバーでも読み込まれ、16種が登録される")
+    @DisplayName("本番の jar が 26.1 のサーバーでも読み込まれ、19種が登録される")
     void pluginLoads() throws Exception {
         console.send("modifier status");
-        console.await("登録数: 16", Duration.ofSeconds(30));
+        console.await("登録数: 19", Duration.ofSeconds(30));
         assertTrue(console.sawLine("リソースパックを配信します"),
                 "パックの配信が始まっていない" + console.tail());
     }

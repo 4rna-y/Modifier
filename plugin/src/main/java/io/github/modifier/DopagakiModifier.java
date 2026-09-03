@@ -39,7 +39,7 @@ public final class DopagakiModifier extends BaseModifier {
     @Override
     public int weight() {
         // 常時の -30% をキル後の +75% で取り返す。腕が出る。
-        return 8;
+        return 6;
     }
 
     @Override

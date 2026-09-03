@@ -47,7 +47,7 @@ public final class SerfModifier extends BaseModifier {
     @Override
     public int weight() {
         // 戦闘に影響しない経済効果。
-        return 8;
+        return 6;
     }
 
     @Override
