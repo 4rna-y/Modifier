@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "io.github.modifier"
-version = "0.2.1"
+version = "0.2.2"
 
 repositories {
     mavenCentral()
@@ -39,9 +39,19 @@ tasks.test {
 
 // リソースパックを jar に同梱する。プラグインがこれを自分で配信するので、
 // 外部にファイルを置く必要も、SHA-1 を手で書く必要も無い。
+// 同じサーバーに載る Mamble のパックも一緒に固める。パックを 2 つ別々に push すると、クライアントは
+// 先のパックの確認を破棄 (DISCARDED) してしまうので、1 つの zip にまとめて 1 回で送る。
+// 隣に mamble/ が無ければ Modifier の素材だけになる。
+val mamblePackDir = rootProject.file("../mamble/pack")
+
 val resourcePackZip = tasks.register<Zip>("resourcePackZip") {
-    description = "同梱用に pack/ を固める"
+    description = "同梱用に pack/ (と隣の mamble/pack) を固める"
     from(packDir)
+    if (mamblePackDir.isDirectory) {
+        from(mamblePackDir) {
+            exclude("pack.mcmeta")
+        }
+    }
     archiveFileName = "resourcepack.zip"
     destinationDirectory = layout.buildDirectory.dir("resourcepack")
     // 中身が同じなら同じ zip になるようにする。SHA-1 が動くとクライアントが毎回引き直す。

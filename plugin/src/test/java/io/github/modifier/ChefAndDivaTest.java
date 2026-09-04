@@ -80,30 +80,30 @@ class ChefAndDivaTest {
     @DisplayName("シェフ")
     class Chef {
 
-        /** 常に同じ効果を引く乱数。 */
-        private static Random always(int index) {
+        /** 常に同じ値を返す乱数。確率の判定と効果の添字の両方に使われる。 */
+        private static Random always(int value) {
             return new Random() {
                 @Override
                 public int nextInt(int bound) {
-                    return index;
+                    return value;
                 }
             };
         }
 
-        /** 呼ばれるたびに次の効果を引く乱数。 */
-        private static Random sequential() {
+        /** 呼ばれるたびに次の値を返す乱数 (最後の値を繰り返す)。 */
+        private static Random sequence(int... values) {
             return new Random() {
                 private int next;
 
                 @Override
                 public int nextInt(int bound) {
-                    return next++ % bound;
+                    return values[Math.min(next++, values.length - 1)];
                 }
             };
         }
 
-        private final ChefModifier chef = new ChefModifier(always(0));
-        private final ChefModifier.Buff first = ChefModifier.BUFFS.get(0);
+        private final ChefModifier chef = new ChefModifier();
+        private final ChefModifier.Buff first = ChefModifier.EFFECTS.get(0);
 
         @BeforeEach
         void foods() {
@@ -138,7 +138,7 @@ class ChefAndDivaTest {
         }
 
         @Test
-        @DisplayName("パンを作ると効果付きの料理になる")
+        @DisplayName("パンを作ると料理になる (効果はまだ決まらない)")
         void breadBecomesADish() {
             ItemStack bread = Mocks.stampableItem(Material.BREAD, 1);
             PrepareItemCraftEvent event = crafting(bread, true);
@@ -147,11 +147,11 @@ class ChefAndDivaTest {
 
             ArgumentCaptor<ItemStack> result = ArgumentCaptor.forClass(ItemStack.class);
             verify(event.getInventory()).setResult(result.capture());
-            assertSame(first, ChefModifier.buffOn(result.getValue()), "印が付いている");
+            assertTrue(ChefModifier.isDish(result.getValue()), "印が付いている");
         }
 
         @Test
-        @DisplayName("名前は「シェフの作ったおいしい○○」、説明欄に効能が載る")
+        @DisplayName("名前は「シェフの作った○○」、説明欄に確率が載る")
         void namedAndDescribed() {
             ItemStack bread = Mocks.stampableItem(Material.BREAD, 1);
             chef.onCraftPrepared(me.player(), crafting(bread, true));
@@ -159,8 +159,7 @@ class ChefAndDivaTest {
             ItemMeta meta = bread.getItemMeta();
             ArgumentCaptor<Component> name = ArgumentCaptor.forClass(Component.class);
             verify(meta).displayName(name.capture());
-            assertTrue(plain(name.getValue()).startsWith("シェフの作ったおいしい"),
-                    plain(name.getValue()));
+            assertTrue(plain(name.getValue()).startsWith("シェフの作った"), plain(name.getValue()));
             assertTrue(name.getValue().children().stream().anyMatch(child ->
                     child instanceof TranslatableComponent t && t.key().equals("item.minecraft.bread")),
                     "アイテム名はクライアントの言語で出す");
@@ -168,8 +167,8 @@ class ChefAndDivaTest {
             @SuppressWarnings("unchecked")
             ArgumentCaptor<List<Component>> lore = ArgumentCaptor.forClass(List.class);
             verify(meta).lore(lore.capture());
-            assertTrue(plain(lore.getValue().get(0)).contains(first.label()),
-                    "効能: " + plain(lore.getValue().get(0)));
+            assertTrue(plain(lore.getValue().get(0)).contains(ChefModifier.EFFECT_PERCENT + "%"),
+                    "確率: " + plain(lore.getValue().get(0)));
             verify(bread).setItemMeta(meta);
         }
 
@@ -179,48 +178,6 @@ class ChefAndDivaTest {
             PrepareItemCraftEvent event = crafting(Mocks.stampableItem(Material.STICK, 4), true);
             chef.onCraftPrepared(me.player(), event);
             verify(event.getInventory(), never()).setResult(any());
-        }
-
-        @Test
-        @DisplayName("同じ料理を作り続ける間は同じ効果、作り終えると引き直す")
-        void sameBatchSameBuff() {
-            ChefModifier rolling = new ChefModifier(sequential());
-            ItemStack bread = Mocks.stampableItem(Material.BREAD, 1);
-
-            rolling.onCraftPrepared(me.player(), crafting(bread, true));
-            ChefModifier.Buff batch = ChefModifier.buffOn(bread);
-            rolling.onCraftPrepared(me.player(), crafting(bread, true));
-            assertSame(batch, ChefModifier.buffOn(bread), "シフトクリック中に効果が変わると重ならない");
-
-            // グリッドが空になった (レシピ無し)
-            rolling.onCraftPrepared(me.player(), crafting(Mocks.stampableItem(Material.AIR, 0), false));
-            rolling.onCraftPrepared(me.player(), crafting(bread, true));
-            assertNotEquals(batch, ChefModifier.buffOn(bread), "次の料理は引き直す");
-        }
-
-        @Test
-        @DisplayName("別の料理に切り替えると引き直す")
-        void differentDishRerolls() {
-            ChefModifier rolling = new ChefModifier(sequential());
-            ItemStack bread = Mocks.stampableItem(Material.BREAD, 1);
-            ItemStack beef = Mocks.stampableItem(Material.COOKED_BEEF, 1);
-
-            rolling.onCraftPrepared(me.player(), crafting(bread, true));
-            rolling.onCraftPrepared(me.player(), crafting(beef, true));
-            assertNotEquals(ChefModifier.buffOn(bread), ChefModifier.buffOn(beef));
-        }
-
-        @Test
-        @DisplayName("外すと作りかけの記録も消える")
-        void forgetsOnRemoval() {
-            ChefModifier rolling = new ChefModifier(sequential());
-            ItemStack bread = Mocks.stampableItem(Material.BREAD, 1);
-            rolling.onCraftPrepared(me.player(), crafting(bread, true));
-            ChefModifier.Buff batch = ChefModifier.buffOn(bread);
-
-            rolling.remove(me.player());
-            rolling.onCraftPrepared(me.player(), crafting(bread, true));
-            assertNotEquals(batch, ChefModifier.buffOn(bread));
         }
 
         @Test
@@ -234,7 +191,7 @@ class ChefAndDivaTest {
 
             ArgumentCaptor<ItemStack> placed = ArgumentCaptor.forClass(ItemStack.class);
             verify(event.getView()).setItem(eq(2), placed.capture());
-            assertSame(first, ChefModifier.buffOn(placed.getValue()));
+            assertTrue(ChefModifier.isDish(placed.getValue()));
         }
 
         @Test
@@ -245,7 +202,7 @@ class ChefAndDivaTest {
                     InventoryType.SlotType.CONTAINER, 0, beef);
             chef.onInventoryClick(me.player(), event);
             verify(event.getView(), never()).setItem(anyInt(), any());
-            assertNull(ChefModifier.buffOn(beef));
+            assertFalse(ChefModifier.isDish(beef));
         }
 
         @Test
@@ -259,25 +216,25 @@ class ChefAndDivaTest {
         }
 
         @Test
-        @DisplayName("すでに料理なら引き直さない")
-        void doesNotRerollADish() {
-            ItemStack beef = Mocks.stampableItem(Material.COOKED_BEEF, 1);
-            ChefModifier.cook(beef, ChefModifier.BUFFS.get(3));
+        @DisplayName("すでに料理なら触らない")
+        void doesNotRecookADish() {
+            ItemStack beef = ChefModifier.cook(Mocks.stampableItem(Material.COOKED_BEEF, 1));
             InventoryClickEvent event = click(mock(FurnaceInventory.class),
                     InventoryType.SlotType.RESULT, 2, beef);
             chef.onInventoryClick(me.player(), event);
             verify(event.getView(), never()).setItem(anyInt(), any());
-            assertSame(ChefModifier.BUFFS.get(3), ChefModifier.buffOn(beef));
+            chef.onCraftPrepared(me.player(), crafting(beef, true));
         }
 
         @Test
-        @DisplayName("料理を食べると効果が掛かる (誰が食べても)")
-        void eatingGrantsTheBuff() {
+        @DisplayName("食べたときに効果が決まり、誰が食べても掛かる")
+        void eatingRollsTheBuff() {
             Mocks.FakePlayer guest = Mocks.player("Guest", server, world);
-            ItemStack dish = ChefModifier.cook(Mocks.stampableItem(Material.BREAD, 1), first);
+            ItemStack dish = ChefModifier.cook(Mocks.stampableItem(Material.BREAD, 1));
 
-            ChefModifier.serve(guest.player(), dish);
+            ChefModifier.Buff buff = ChefModifier.serve(guest.player(), dish, always(0));
 
+            assertSame(first, buff);
             assertEquals(1, guest.state().potionEffects.size());
             PotionEffect effect = guest.state().potionEffects.get(0);
             assertSame(first.type(), effect.getType());
@@ -285,9 +242,29 @@ class ChefAndDivaTest {
         }
 
         @Test
+        @DisplayName("外れ (90%) は何も起きない")
+        void sometimesNothing() {
+            ItemStack dish = ChefModifier.cook(Mocks.stampableItem(Material.BREAD, 1));
+            assertNull(ChefModifier.serve(me.player(), dish, always(ChefModifier.EFFECT_PERCENT)));
+            assertTrue(me.state().potionEffects.isEmpty());
+        }
+
+        @Test
+        @DisplayName("悪い効果も出る")
+        void debuffs() {
+            ItemStack dish = ChefModifier.cook(Mocks.stampableItem(Material.BREAD, 1));
+            // 1 回目 (確率の判定) は 0 で当たり、2 回目 (添字) で最初の悪い効果
+            ChefModifier.Buff buff = ChefModifier.serve(me.player(), dish, sequence(0, ChefModifier.BUFFS.size()));
+            assertNotNull(buff);
+            assertTrue(buff.debuff());
+            assertSame(ChefModifier.DEBUFFS.get(0), buff);
+            assertEquals(1, me.state().potionEffects.size());
+        }
+
+        @Test
         @DisplayName("料理でなければ何も掛からない")
         void plainFoodDoesNothing() {
-            ChefModifier.serve(me.player(), Mocks.itemStack(Material.BREAD, 1));
+            assertNull(ChefModifier.serve(me.player(), Mocks.itemStack(Material.BREAD, 1), always(0)));
             assertTrue(me.state().potionEffects.isEmpty());
         }
 
@@ -301,10 +278,14 @@ class ChefAndDivaTest {
         }
 
         @Test
-        @DisplayName("効果の id は重複しない")
+        @DisplayName("効果の id は重複しない。良い効果と悪い効果の両方を含み、45 秒以内")
         void buffIdsAreUnique() {
-            assertEquals(ChefModifier.BUFFS.size(),
-                    ChefModifier.BUFFS.stream().map(ChefModifier.Buff::id).distinct().count());
+            assertEquals(ChefModifier.EFFECTS.size(),
+                    ChefModifier.EFFECTS.stream().map(ChefModifier.Buff::id).distinct().count());
+            assertEquals(ChefModifier.BUFFS.size() + ChefModifier.DEBUFFS.size(), ChefModifier.EFFECTS.size());
+            assertTrue(ChefModifier.BUFFS.stream().noneMatch(ChefModifier.Buff::debuff));
+            assertTrue(ChefModifier.DEBUFFS.stream().allMatch(ChefModifier.Buff::debuff));
+            assertTrue(ChefModifier.EFFECTS.stream().allMatch(b -> b.durationTicks() <= 45 * 20));
         }
     }
 

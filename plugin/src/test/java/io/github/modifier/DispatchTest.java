@@ -191,10 +191,16 @@ class DispatchTest {
         void chefDishesWorkForEveryone() {
             Mocks.makeEdible(Material.BREAD);
             selectsNothing(me);
-            ItemStack dish = ChefModifier.cook(Mocks.stampableItem(Material.BREAD, 1),
-                    ChefModifier.BUFFS.get(0));
+            ItemStack dish = ChefModifier.cook(Mocks.stampableItem(Material.BREAD, 1));
 
-            effects(new Random(0)).onConsume(new org.bukkit.event.player.PlayerItemConsumeEvent(
+            // 食べたときに引く。0 を返す乱数なら「効果あり」で 1 番目の効果
+            Random alwaysHits = new Random() {
+                @Override
+                public int nextInt(int bound) {
+                    return 0;
+                }
+            };
+            effects(alwaysHits).onConsume(new org.bukkit.event.player.PlayerItemConsumeEvent(
                     me.player(), dish, org.bukkit.inventory.EquipmentSlot.HAND));
 
             assertFalse(me.state().potionEffects.isEmpty(), "料理の効果はアイテムに付いている");

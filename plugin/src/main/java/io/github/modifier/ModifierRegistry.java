@@ -40,7 +40,7 @@ public final class ModifierRegistry {
         registry.register(new InsomniaModifier());
         registry.register(new LeaderModifier());
         registry.register(new NokyaModifier(store));
-        registry.register(new ChefModifier(random));
+        registry.register(new ChefModifier());
         registry.register(new RegretModifier());
         registry.register(new DivaModifier());
         return registry;

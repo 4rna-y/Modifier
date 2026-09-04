@@ -1,6 +1,8 @@
 package io.github.modifier;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -9,12 +11,13 @@ import net.kyori.adventure.resource.ResourcePackRequest;
 import net.kyori.adventure.resource.ResourcePackStatus;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.RegisteredServiceProvider;
 
 /** 参加者へリソースパックを配る。 */
 public final class ResourcePackService {
 
     public static final String DEFAULT_PROMPT =
-            "<gold>モディファイアのアイコンを表示するために必要です";
+            "<gold>アイコンを表示するために必要です";
 
     private final ModifierPlugin plugin;
     private ResourcePackHost host;
@@ -68,15 +71,27 @@ public final class ResourcePackService {
         ResourcePackInfo info = ResourcePackInfo.resourcePackInfo(
                 host.id(), host.uri(), host.sha1());
 
+        // 他のプラグイン (Mamble) のパックも 1 回の要求にまとめて送る。別々に送ると、確認画面が出ている間に
+        // 次の要求が届いた方が勝ち、先のパックは DISCARDED になって適用されない。
+        // 相手は ServicesManager に ResourcePackInfo を登録しておくだけでよい。
+        List<ResourcePackInfo> packs = new ArrayList<>();
+        packs.add(info);
+        for (RegisteredServiceProvider<ResourcePackInfo> registration
+                : plugin.getServer().getServicesManager().getRegistrations(ResourcePackInfo.class)) {
+            if (registration.getPlugin() != plugin) {
+                packs.add(registration.getProvider());
+            }
+        }
+
         player.sendResourcePacks(ResourcePackRequest.resourcePackRequest()
-                .packs(info)
+                .packs(packs)
                 .required(plugin.getConfig().getBoolean("resource-pack.required", true))
-                .replace(true)
+                .replace(false)
                 .prompt(MiniMessage.miniMessage().deserialize(
                         plugin.getConfig().getString("resource-pack.prompt", DEFAULT_PROMPT)))
-                // ACCEPTED / DOWNLOADED は途中経過なので、決着した時だけ通す
+                // ACCEPTED / DOWNLOADED は途中経過なので、自分のパックが決着した時だけ通す
                 .callback((uuid, status, audience) -> {
-                    if (!status.intermediate()) {
+                    if (uuid.equals(host.id()) && !status.intermediate()) {
                         onResolved.accept(status);
                     }
                 })

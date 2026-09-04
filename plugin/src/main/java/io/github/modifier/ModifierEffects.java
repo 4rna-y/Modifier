@@ -250,7 +250,7 @@ public final class ModifierEffects implements Listener {
     public void onConsume(PlayerItemConsumeEvent event) {
         Player player = event.getPlayer();
         // シェフの料理は、食べた人が何を選んでいようと効く
-        ChefModifier.serve(player, event.getItem());
+        ChefModifier.serve(player, event.getItem(), random);
         active(player).ifPresent(modifier -> modifier.onConsume(player, event));
     }
 

@@ -42,7 +42,7 @@ resource-pack:
   required: true
 
   # ダウンロードの確認画面に出す文言 (MiniMessage 形式)。
-  prompt: "<gold>モディファイアのアイコンを表示するために必要です"
+  prompt: "<gold>アイコンを表示するために必要です"
 
   # パックの適用を待つ上限 (tick)。過ぎたら待たずに選択画面を出す。
   apply-timeout-ticks: 200
