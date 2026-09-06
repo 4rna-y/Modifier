@@ -16,7 +16,7 @@ public final class RegretModifier extends BaseModifier {
 
     @Override
     public int weight() {
-        // なにもしないのに一番よく出る。引くたびに後悔できるように。
-        return 8;
+        // なにもしないのに標準並みに出る。引くたびに後悔できるように。
+        return 5;
     }
 }

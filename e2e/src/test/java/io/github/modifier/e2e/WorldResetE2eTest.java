@@ -90,7 +90,7 @@ class WorldResetE2eTest {
                         paperJar.getFileName().toString(), "nogui"));
         console.await("Done (", BOOT);
 
-        // 3択は24種からの抽選なので、狙ったものが出るまで引き直させる。要 OP。
+        // 3択は25種からの抽選なので、狙ったものが出るまで引き直させる。要 OP。
         console.send("op " + VICTIM);
         // 蘇生後の HP を見るので、自然回復で埋められると測れない。
         // 満腹度が満タンだと数秒で数 HP 戻ってしまう。

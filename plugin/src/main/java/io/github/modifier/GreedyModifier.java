@@ -37,8 +37,8 @@ public final class GreedyModifier extends BaseModifier {
 
     @Override
     public int weight() {
-        // 2 つぶん強いが、下方修正だけの 2 つを引くこともある。死を打ち消すものを引く可能性もあるので低め。
-        return 4;
+        // 2 つぶん強いが、下方修正だけの 2 つを引くこともある。死を打ち消すものを引く可能性があるので、極レアに寄せる。
+        return 3;
     }
 
     @Override

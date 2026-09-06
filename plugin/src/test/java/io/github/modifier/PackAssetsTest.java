@@ -36,7 +36,7 @@ class PackAssetsTest {
      * <p>アートが出来たらパックに置き、ここから消すこと。置いたのに消し忘れていると
      * このテストが落ちる。
      */
-    private static final Set<String> PENDING_ICONS = Set.of();
+    private static final Set<String> PENDING_ICONS = Set.of("strong_legs");
 
     private final ModifierRegistry registry = ModifierRegistry.withBuiltins(
             mock(Plugin.class), new SelectionStore(mock(Server.class)), new Random(0));

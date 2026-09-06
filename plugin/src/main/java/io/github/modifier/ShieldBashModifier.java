@@ -46,7 +46,7 @@ public final class ShieldBashModifier extends BaseModifier {
     @Override
     public int weight() {
         // 盾を構える技術が要る。受動的に強くならないのが良い。
-        return 6;
+        return 5;
     }
 
     @Override

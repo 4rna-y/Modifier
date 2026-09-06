@@ -17,6 +17,7 @@ import org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -128,6 +129,51 @@ class PassiveEffectTest {
             PlayerItemDamageEvent event = new PlayerItemDamageEvent(me.player(), tool, 2, 2);
             aho.onItemDamage(me.player(), event);
             assertEquals(6, event.getDamage());
+        }
+    }
+
+    @Nested
+    @DisplayName("下半身強者")
+    class StrongLegs {
+        private final StrongLegsModifier legs = new StrongLegsModifier();
+
+        @Test
+        @DisplayName("落下ダメージの attribute が -90% で付き、外せば消える")
+        void fallAttribute() {
+            legs.apply(me.player());
+            assertEquals(-0.90, me.scalarOn(Attribute.FALL_DAMAGE_MULTIPLIER), 1e-9);
+            legs.remove(me.player());
+            assertFalse(me.hasAttribute(Attribute.FALL_DAMAGE_MULTIPLIER));
+        }
+
+        @Test
+        @DisplayName("落下以外のダメージは 1.5 倍、落下はイベントでは触らない")
+        void otherDamageIsHalfAgain() {
+            EntityDamageEvent hit = damage(10.0);
+            legs.onDamaged(me.player(), hit);
+            assertEquals(15.0, hit.getDamage(), 1e-9);
+
+            EntityDamageEvent fall = new EntityDamageEvent(me.player(), DamageCause.FALL,
+                    Mocks.damageSource(), 10.0);
+            legs.onDamaged(me.player(), fall);
+            assertEquals(10.0, fall.getDamage(), 1e-9, "落下は attribute 側で減らす");
+        }
+
+        @Test
+        @DisplayName("空腹を間隔ごとに掛け直し、外せば消す")
+        void keepsHungerOn() {
+            Mocks.installCurrentTick(server, 100);
+            legs.tick(me.player());
+            legs.tick(me.player());
+            assertEquals(1, me.state().potionEffects.size(), "間隔内では掛け直さない");
+            assertEquals(PotionEffectType.HUNGER, me.state().potionEffects.get(0).getType());
+
+            Mocks.installCurrentTick(server, 100 + (int) StrongLegsModifier.APPLY_INTERVAL_TICKS);
+            legs.tick(me.player());
+            assertEquals(2, me.state().potionEffects.size(), "間隔が過ぎたら掛け直す");
+
+            legs.remove(me.player());
+            org.mockito.Mockito.verify(me.player()).removePotionEffect(PotionEffectType.HUNGER);
         }
     }
 

@@ -312,6 +312,19 @@ class ModifierEffectTest {
     }
 
     @Nested
+    @DisplayName("下半身強者")
+    class StrongLegs {
+        @Test
+        @DisplayName("落下 -90% / それ以外 +50% / 空腹は掛け直し間隔より長く途切れない")
+        void numbers() {
+            assertEquals(-0.90, StrongLegsModifier.FALL_DAMAGE_MULTIPLIER, 1e-9);
+            assertEquals(1.5, StrongLegsModifier.OTHER_DAMAGE_MULTIPLIER, 1e-9);
+            assertTrue(StrongLegsModifier.HUNGER_DURATION_TICKS > StrongLegsModifier.APPLY_INTERVAL_TICKS,
+                    "空腹が間隔より短いと点滅する");
+        }
+    }
+
+    @Nested
     @DisplayName("蘇生")
     class RevivalRule {
         @Test

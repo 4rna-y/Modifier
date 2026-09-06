@@ -48,6 +48,7 @@ public final class ModifierRegistry {
         registry.register(new MinerModifier());
         registry.register(new ButcherModifier(random));
         registry.register(new CreeperInsuranceModifier());
+        registry.register(new StrongLegsModifier());
         // よくばりは他を引くので、他を登録し終えてから
         registry.register(new GreedyModifier(registry, store, random));
         return registry;

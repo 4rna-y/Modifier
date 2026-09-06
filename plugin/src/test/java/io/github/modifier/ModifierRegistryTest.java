@@ -24,9 +24,9 @@ class ModifierRegistryTest {
             mock(Plugin.class), new SelectionStore(mock(Server.class)), new Random(0));
 
     @Test
-    @DisplayName("仕様どおり24種が登録されている")
-    void allTwentyFourAreRegistered() {
-        assertEquals(24, registry.all().size());
+    @DisplayName("仕様どおり25種が登録されている")
+    void allTwentyFiveAreRegistered() {
+        assertEquals(25, registry.all().size());
         Set<String> ids = new HashSet<>(registry.all().stream().map(Modifier::id).toList());
         for (String id : new String[] {
                 "fat", "swiftness_boots", "shield_bash",
@@ -34,7 +34,7 @@ class ModifierRegistryTest {
                 "black_swordsman", "landmine", "healer", "food_poisoning",
                 "clown", "insomnia", "leader", "nokya",
                 "chef", "regret", "diva", "fishers", "miner", "butcher",
-                "creeper_insurance", "greedy"}) {
+                "creeper_insurance", "greedy", "strong_legs"}) {
             assertTrue(ids.contains(id), id + " が登録されていない");
         }
     }
@@ -106,13 +106,13 @@ class ModifierRegistryTest {
     }
 
     @Test
-    @DisplayName("なにもしない後悔が一番よく出る")
-    void regretIsTheMostCommon() {
-        int regret = registry.byId("regret").orElseThrow().weight();
+    @DisplayName("下半身強者が一番よく出る")
+    void strongLegsIsTheMostCommon() {
+        int top = registry.byId("strong_legs").orElseThrow().weight();
         for (Modifier modifier : registry.all()) {
-            if (!modifier.id().equals("regret")) {
-                assertTrue(modifier.weight() < regret,
-                        modifier.id() + " の重み " + modifier.weight() + " が後悔 " + regret + " 以上ある");
+            if (!modifier.id().equals("strong_legs")) {
+                assertTrue(modifier.weight() < top,
+                        modifier.id() + " の重み " + modifier.weight() + " が下半身強者 " + top + " 以上ある");
             }
         }
     }
@@ -142,11 +142,11 @@ class ModifierRegistryTest {
             }
         }
 
-        // 一番軽い無キャ (1) と、一番重い後悔 (8) の差は 8 倍あるはず
+        // 一番軽い無キャ (1) と、一番重い下半身強者 (6) の差は 6 倍あるはず
         int lightest = hits.getOrDefault("nokya", 0);
-        int heaviest = hits.getOrDefault("regret", 0);
+        int heaviest = hits.getOrDefault("strong_legs", 0);
         assertTrue(heaviest > lightest * 3,
-                "重みが抽選に効いていない。無キャ " + lightest + " 回に対して後悔 " + heaviest + " 回");
+                "重みが抽選に効いていない。無キャ " + lightest + " 回に対して下半身強者 " + heaviest + " 回");
 
         // 重みの順序が出現数の順序としておおむね保たれていること
         for (Modifier modifier : registry.all()) {
