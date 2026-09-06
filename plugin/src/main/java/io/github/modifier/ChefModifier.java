@@ -105,7 +105,7 @@ public final class ChefModifier extends BaseModifier {
     public static final List<Buff> EFFECTS = java.util.stream.Stream.concat(BUFFS.stream(), DEBUFFS.stream()).toList();
 
     public ChefModifier() {
-        super("chef", "シェフ", Material.BREAD,
+        super("chef", "シェフ", Material.PUMPKIN_PIE,
                 "調理した食べ物が料理になり、食べると " + EFFECT_PERCENT + "% で",
                 "ランダムなポーション効果が付く (悪いものも)");
     }
@@ -113,7 +113,7 @@ public final class ChefModifier extends BaseModifier {
     @Override
     public int weight() {
         // 料理を配れば周りも得をする。誰にも迷惑を掛けない標準枠。
-        return 6;
+        return 5;
     }
 
     @Override

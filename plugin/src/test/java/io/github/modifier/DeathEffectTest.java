@@ -102,6 +102,58 @@ class DeathEffectTest {
     }
 
     @Nested
+    @DisplayName("クリーパー保険")
+    class CreeperInsurance {
+
+        private final CreeperInsuranceModifier insurance = new CreeperInsuranceModifier();
+
+        private EntityDamageEvent blastBy(Class<? extends org.bukkit.entity.Entity> attacker) {
+            return new org.bukkit.event.entity.EntityDamageByEntityEvent(mock(attacker), me.player(),
+                    DamageCause.ENTITY_EXPLOSION, Mocks.damageSource(), 100.0);
+        }
+
+        @Test
+        @DisplayName("クリーパーの爆発による死を打ち消し、リスポーン地点へ飛ばす")
+        void insuresAgainstCreepers() {
+            Mocks.installCurrentTick(server, 1000);
+            Location respawn = new Location(world, 100, 70, 100);
+            when(me.player().getRespawnLocation()).thenReturn(respawn);
+            me.state().health = 0.5;
+
+            assertTrue(insurance.interceptDeath(me.player(), blastBy(org.bukkit.entity.Creeper.class)));
+
+            assertEquals(10.0, me.state().health, 1e-9, "最大 HP の半分に戻る");
+            assertEquals(List.of(respawn), me.state().teleports);
+        }
+
+        @Test
+        @DisplayName("3 分は続けて下りないが、過ぎればまた下りる")
+        void threeMinuteCooldown() {
+            when(me.player().getRespawnLocation()).thenReturn(new Location(world, 0, 70, 0));
+            Mocks.installCurrentTick(server, 1000);
+            assertTrue(insurance.interceptDeath(me.player(), blastBy(org.bukkit.entity.Creeper.class)));
+
+            Mocks.installCurrentTick(server, 1000 + (int) CreeperInsuranceModifier.COOLDOWN_TICKS - 1);
+            assertFalse(insurance.interceptDeath(me.player(), blastBy(org.bukkit.entity.Creeper.class)),
+                    "3 分経つまでは下りない");
+
+            Mocks.installCurrentTick(server, 1000 + (int) CreeperInsuranceModifier.COOLDOWN_TICKS);
+            assertTrue(insurance.interceptDeath(me.player(), blastBy(org.bukkit.entity.Creeper.class)),
+                    "3 分経てばまた下りる");
+        }
+
+        @Test
+        @DisplayName("クリーパー以外の死は対象外")
+        void onlyCreepers() {
+            Mocks.installCurrentTick(server, 1000);
+            assertFalse(insurance.interceptDeath(me.player(), blastBy(org.bukkit.entity.TNTPrimed.class)),
+                    "TNT の爆発は保険の対象外");
+            assertFalse(insurance.interceptDeath(me.player(), lethal()), "殴られた死も対象外");
+            assertTrue(me.state().teleports.isEmpty());
+        }
+    }
+
+    @Nested
     @DisplayName("死神ルーレット")
     class ReaperRoulette {
 

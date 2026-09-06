@@ -46,6 +46,12 @@ public final class Attributes {
         instance.addTransientModifier(new AttributeModifier(key, amount, operation));
     }
 
+    /** そのキーの修正が付いているか。 */
+    public static boolean has(Player player, Attribute attribute, NamespacedKey key) {
+        AttributeInstance instance = player.getAttribute(attribute);
+        return instance != null && instance.getModifier(key) != null;
+    }
+
     /** 付けた修正を外す。付いていなければ何もしない。 */
     public static void clear(Player player, Attribute attribute, NamespacedKey key) {
         AttributeInstance instance = player.getAttribute(attribute);

@@ -26,6 +26,14 @@ class ModifierCommandTest {
     private final ModifierRegistry registry = ModifierRegistry.withBuiltins(
             mock(Plugin.class), new SelectionStore(mock(Server.class)), new Random(0));
 
+    @org.junit.jupiter.api.BeforeEach
+    void itemNames() {
+        // 道具の名前は翻訳キーで組む。テスト用の偽レジストリはキーを知らないので、ここで教える
+        registry.all().stream().flatMap(modifier -> modifier.startingItems().stream()).forEach(item ->
+                TestRegistryAccess.override(item.type().asItemType(), "translationKey",
+                        "item.minecraft." + item.type().getKey().getKey()));
+    }
+
     @Test
     @DisplayName("選択中のモディファイアは、名前に続けて効果の説明を並べる")
     void showsNameThenDescription() {

@@ -49,7 +49,11 @@ public final class SelectionListener implements Listener {
         boolean needsSelection = store.needsSelection(player);
         if (needsSelection) {
             awaitingOpen.add(player.getUniqueId());
+            // 画面が開くまでの待ちも含めて、選び終わるまで敵モブに殺されないようにする
+            SelectionGuard.protect(player);
         } else {
+            // 守っている最中に落ちたサーバーの後始末。ふつうは何もしない
+            SelectionGuard.release(player);
             // 選択済みなら、その効果を掛け直す
             effects.apply(player);
         }
@@ -113,7 +117,12 @@ public final class SelectionListener implements Listener {
         }
         store.select(player, modifier);
         selection.forget(player.getUniqueId());
+        // 選んだ時点で決めるもの (よくばりの中身) を先に決めてから効果を掛ける
+        modifier.onChosen(player);
         effects.apply(player);
+        SelectionGuard.release(player);
+        // 道具をもらえるものは、この一度だけ配る。よくばりなら中身のぶんも
+        StartingItems.give(player, modifier.resolveFor(player).startingItems());
 
         player.sendMessage(plugin.message("<green>"
                 + PlainTextComponentSerializer.plainText().serialize(modifier.displayName())
@@ -170,5 +179,7 @@ public final class SelectionListener implements Listener {
     public void onQuit(PlayerQuitEvent event) {
         awaitingOpen.remove(event.getPlayer().getUniqueId());
         selection.forget(event.getPlayer().getUniqueId());
+        // 無敵のまま保存させない。次に参加したときにまた守る
+        SelectionGuard.release(event.getPlayer());
     }
 }

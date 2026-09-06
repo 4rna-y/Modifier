@@ -100,6 +100,20 @@ class DispatchTest {
         }
 
         @Test
+        @DisplayName("よくばりを選んでいる人には、中身の効果が届く")
+        void greedyRoutesToItsParts() {
+            registry.register(new FatModifier());
+            GreedyModifier greedy = new GreedyModifier(registry, store, new Random(0));
+            registry.register(greedy);
+            selects(me, greedy);
+            when(store.bundle(me.player())).thenReturn(List.of("fat"));
+
+            EntityDamageEvent event = damage(me, 10.0);
+            effects(new Random(0)).onDamage(event);
+            assertEquals(7.5, event.getDamage(), 1e-9, "中身のデブが効く");
+        }
+
+        @Test
         @DisplayName("何も選んでいなければ素通し")
         void nothingSelected() {
             registry.register(new FatModifier());
@@ -151,6 +165,88 @@ class DispatchTest {
             public void onInteract(Player player, org.bukkit.event.player.PlayerInteractEvent e) {
                 interacts.incrementAndGet();
             }
+
+            final AtomicInteger fishes = new AtomicInteger();
+            final AtomicInteger drops = new AtomicInteger();
+            final AtomicInteger killDrops = new AtomicInteger();
+            final AtomicInteger potions = new AtomicInteger();
+            final AtomicInteger deaths = new AtomicInteger();
+
+            @Override
+            public void onFish(Player player, org.bukkit.event.player.PlayerFishEvent e) {
+                fishes.incrementAndGet();
+            }
+
+            @Override
+            public void onItemDrop(Player player, org.bukkit.event.player.PlayerDropItemEvent e) {
+                drops.incrementAndGet();
+            }
+
+            @Override
+            public void onKillDrops(Player player, org.bukkit.event.entity.EntityDeathEvent e) {
+                killDrops.incrementAndGet();
+            }
+
+            @Override
+            public void onPotionEffect(Player player, org.bukkit.event.entity.EntityPotionEffectEvent e) {
+                potions.incrementAndGet();
+            }
+
+            @Override
+            public void onDeath(Player player, org.bukkit.event.entity.PlayerDeathEvent e) {
+                deaths.incrementAndGet();
+            }
+        }
+
+        @Test
+        @DisplayName("釣り・投棄・落とし物・ポーション効果・死亡も選んでいる人にだけ届く")
+        void routesTheGatheringHooks() {
+            Recording recording = new Recording();
+            registry.register(recording);
+            selects(me, recording);
+            Mocks.FakePlayer other = Mocks.player("Other", server, world);
+            selectsNothing(other);
+            ModifierEffects effects = effects(new Random(0));
+
+            for (Mocks.FakePlayer player : List.of(me, other)) {
+                effects.onFish(new org.bukkit.event.player.PlayerFishEvent(player.player(), null,
+                        mock(org.bukkit.entity.FishHook.class),
+                        org.bukkit.event.player.PlayerFishEvent.State.FISHING));
+                effects.onItemDrop(new org.bukkit.event.player.PlayerDropItemEvent(player.player(),
+                        mock(org.bukkit.entity.Item.class)));
+                org.bukkit.entity.Zombie victim = mock(org.bukkit.entity.Zombie.class);
+                when(victim.getKiller()).thenReturn(player.player());
+                effects.onKillDrops(new org.bukkit.event.entity.EntityDeathEvent(victim,
+                        Mocks.damageSource(), new ArrayList<>()));
+                effects.onPotionEffect(new org.bukkit.event.entity.EntityPotionEffectEvent(player.player(),
+                        null, new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.HUNGER, 20, 0),
+                        null, org.bukkit.event.entity.EntityPotionEffectEvent.Cause.FOOD,
+                        org.bukkit.event.entity.EntityPotionEffectEvent.Action.ADDED, false));
+                org.bukkit.event.entity.PlayerDeathEvent death =
+                        mock(org.bukkit.event.entity.PlayerDeathEvent.class);
+                when(death.getEntity()).thenReturn(player.player());
+                effects.onDeath(death);
+            }
+
+            assertEquals(1, recording.fishes.get());
+            assertEquals(1, recording.drops.get());
+            assertEquals(1, recording.killDrops.get(), "落とし物の加工は倒した人に届く");
+            assertEquals(1, recording.potions.get());
+            assertEquals(1, recording.deaths.get());
+        }
+
+        @Test
+        @DisplayName("倒した人が居ない死には落とし物の加工を配らない")
+        void noKillerNoKillDrops() {
+            Recording recording = new Recording();
+            registry.register(recording);
+            selects(me, recording);
+            org.bukkit.entity.Zombie victim = mock(org.bukkit.entity.Zombie.class);
+
+            effects(new Random(0)).onKillDrops(new org.bukkit.event.entity.EntityDeathEvent(victim,
+                    Mocks.damageSource(), new ArrayList<>()));
+
+            assertEquals(0, recording.killDrops.get());
         }
 
         private org.bukkit.inventory.InventoryView viewOf(Mocks.FakePlayer player) {

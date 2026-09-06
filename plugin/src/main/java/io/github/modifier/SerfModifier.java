@@ -1,5 +1,6 @@
 package io.github.modifier;
 
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
@@ -47,7 +48,12 @@ public final class SerfModifier extends BaseModifier {
     @Override
     public int weight() {
         // 戦闘に影響しない経済効果。
-        return 6;
+        return 5;
+    }
+
+    @Override
+    public List<StartingItems.Item> startingItems() {
+        return List.of(StartingItems.Item.of(Material.IRON_HOE));
     }
 
     @Override

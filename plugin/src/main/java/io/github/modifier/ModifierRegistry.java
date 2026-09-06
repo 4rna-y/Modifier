@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.function.Predicate;
 
 import org.bukkit.plugin.Plugin;
 
@@ -43,6 +44,12 @@ public final class ModifierRegistry {
         registry.register(new ChefModifier());
         registry.register(new RegretModifier());
         registry.register(new DivaModifier());
+        registry.register(new FishersModifier(random));
+        registry.register(new MinerModifier());
+        registry.register(new ButcherModifier(random));
+        registry.register(new CreeperInsuranceModifier());
+        // よくばりは他を引くので、他を登録し終えてから
+        registry.register(new GreedyModifier(registry, store, random));
         return registry;
     }
 
@@ -82,8 +89,16 @@ public final class ModifierRegistry {
      * <p>登録数が {@code count} に満たない場合は、あるだけ返す。
      */
     public List<Modifier> pick(int count, Random random) {
-        List<Modifier> pool = new ArrayList<>(byId.values());
+        return pick(count, random, modifier -> true);
+    }
+
+    /** {@link #pick(int, Random)} と同じだが、{@code eligible} が false のものは母集団に入れない。 */
+    public List<Modifier> pick(int count, Random random, Predicate<Modifier> eligible) {
+        List<Modifier> pool = new ArrayList<>(byId.values().stream().filter(eligible).toList());
         List<Modifier> picked = new ArrayList<>();
+        if (pool.isEmpty()) {
+            return List.of();
+        }
         int wanted = Math.min(count, pool.size());
         // register が 1 以上を保証しているので、pool が空でない限り総和は正。
         int total = pool.stream().mapToInt(Modifier::weight).sum();

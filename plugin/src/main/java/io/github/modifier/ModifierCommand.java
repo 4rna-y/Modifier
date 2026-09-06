@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -81,7 +82,8 @@ public final class ModifierCommand implements BasicCommand {
             sender.sendMessage(plugin.message("<red>プレイヤーが実行してください。"));
             return;
         }
-        List<Component> lines = describeSelection(plugin.store().selectedId(player), plugin.registry());
+        List<Component> lines = describeSelection(plugin.store().selectedId(player), plugin.registry(),
+                modifier -> modifier.resolveFor(player));
         sender.sendMessage(plugin.message(lines.get(0)));
         // 2行目以降 (効果の説明) は接頭辞を付けず、字下げしてぶら下げる。
         lines.stream().skip(1).forEach(sender::sendMessage);
@@ -94,6 +96,14 @@ public final class ModifierCommand implements BasicCommand {
      * 後者は config やビルドを差し替えたときに起こりうる。
      */
     static List<Component> describeSelection(Optional<String> selectedId, ModifierRegistry registry) {
+        return describeSelection(selectedId, registry, UnaryOperator.identity());
+    }
+
+    /**
+     * @param resolve 登録上のモディファイアから、その人に実際に効いているもの (よくばりの中身) を引く
+     */
+    static List<Component> describeSelection(Optional<String> selectedId, ModifierRegistry registry,
+            UnaryOperator<Modifier> resolve) {
         if (selectedId.isEmpty()) {
             return List.of(Component.text("モディファイアを選んでいません。", NamedTextColor.GRAY));
         }
@@ -104,10 +114,12 @@ public final class ModifierCommand implements BasicCommand {
                     NamedTextColor.RED));
         }
 
-        Modifier modifier = selected.get();
+        Modifier modifier = resolve.apply(selected.get());
         List<Component> lines = new ArrayList<>();
         lines.add(Component.text("選択中: ", NamedTextColor.GRAY).append(modifier.displayName()));
         modifier.description().forEach(line ->
+                lines.add(Component.text("  ", NamedTextColor.GRAY).append(line)));
+        StartingItems.describe(modifier.startingItems()).ifPresent(line ->
                 lines.add(Component.text("  ", NamedTextColor.GRAY).append(line)));
         return List.copyOf(lines);
     }

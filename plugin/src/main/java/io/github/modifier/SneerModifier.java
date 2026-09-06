@@ -2,7 +2,6 @@ package io.github.modifier;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
@@ -26,7 +25,7 @@ public final class SneerModifier extends BaseModifier {
     @Override
     public int weight() {
         // 死を打ち消すが、対象は自分の死で、本人は効果を知っている。無キャより軽い。
-        return 3;
+        return 2;
     }
 
     @Override
@@ -36,12 +35,7 @@ public final class SneerModifier extends BaseModifier {
         }
         store.consumeCharge(self);
         Revival.revive(self);
-
-        Location respawn = self.getRespawnLocation();
-        if (respawn == null) {
-            respawn = self.getServer().getWorlds().get(0).getSpawnLocation();
-        }
-        self.teleportAsync(respawn);
+        Revival.sendHome(self);
         self.sendMessage(Component.text("……死ぬわけがない。", NamedTextColor.DARK_GRAY));
         return true;
     }

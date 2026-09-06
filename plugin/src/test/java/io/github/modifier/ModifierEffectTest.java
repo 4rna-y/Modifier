@@ -134,10 +134,10 @@ class ModifierEffectTest {
     @DisplayName("黒の剣士")
     class BlackSwordsman {
         @Test
-        @DisplayName("与えたダメージの10%を吸収する")
+        @DisplayName("与えたダメージの20%を吸収する")
         void numbers() {
-            assertEquals(0.10, BlackSwordsmanModifier.LIFESTEAL_RATIO, 1e-9);
-            assertEquals(1.0, 10.0 * BlackSwordsmanModifier.LIFESTEAL_RATIO, 1e-9);
+            assertEquals(0.20, BlackSwordsmanModifier.LIFESTEAL_RATIO, 1e-9);
+            assertEquals(2.0, 10.0 * BlackSwordsmanModifier.LIFESTEAL_RATIO, 1e-9);
         }
     }
 
@@ -237,6 +237,77 @@ class ModifierEffectTest {
             assertEquals(5.0, LeaderModifier.RADIUS, 1e-9);
             assertTrue(LeaderModifier.EFFECT_DURATION_TICKS > LeaderModifier.APPLY_INTERVAL_TICKS,
                     "効果が間隔より短いとオーラが点滅する");
+        }
+    }
+
+    @Nested
+    @DisplayName("フィッシャーズ")
+    class Fishers {
+        @Test
+        @DisplayName("シルバーフィッシュは 10%")
+        void numbers() {
+            assertEquals(0.10, FishersModifier.SILVERFISH_CHANCE, 1e-9);
+        }
+    }
+
+    @Nested
+    @DisplayName("採掘師")
+    class Miner {
+        @Test
+        @DisplayName("幸運 II")
+        void numbers() {
+            assertEquals(2, MinerModifier.FORTUNE_LEVEL);
+        }
+    }
+
+    @Nested
+    @DisplayName("熱血お肉屋さん")
+    class Butcher {
+        @Test
+        @DisplayName("肉 +1 / 毒は 20% で II / 毒で死なない長さ")
+        void numbers() {
+            assertEquals(1, ButcherModifier.EXTRA_MEAT);
+            assertEquals(0.20, ButcherModifier.POISON_CHANCE, 1e-9);
+            assertEquals(1, ButcherModifier.POISON_AMPLIFIER, "毒 II は amplifier 1");
+            // 毒 II は 12 tick ごとに 1 ダメージ。満タンの 20 を削り切る長さにはしない
+            assertTrue(ButcherModifier.POISON_DURATION_TICKS / 12 < 20, "毒だけで瀕死にはしない");
+        }
+    }
+
+    @Nested
+    @DisplayName("クリーパー保険")
+    class CreeperInsurance {
+        @Test
+        @DisplayName("3 分に一度")
+        void numbers() {
+            assertEquals(3 * 60 * 20, CreeperInsuranceModifier.COOLDOWN_TICKS);
+        }
+    }
+
+    @Nested
+    @DisplayName("よくばり")
+    class Greedy {
+        @Test
+        @DisplayName("2 つ引く")
+        void numbers() {
+            assertEquals(2, GreedyModifier.PICKS);
+        }
+    }
+
+    @Nested
+    @DisplayName("採掘師の食事と原木")
+    class MinerMeals {
+        @Test
+        @DisplayName("3 以下: I 10秒 / 4〜7: I 30秒 / 8 以上: II 20秒 / 原木 -50%")
+        void numbers() {
+            assertEquals(3, MinerModifier.LIGHT_MEAL_MAX);
+            assertEquals(8, MinerModifier.FEAST_MIN);
+            assertEquals(10 * 20, MinerModifier.LIGHT_MEAL_HASTE_TICKS);
+            assertEquals(30 * 20, MinerModifier.MEAL_HASTE_TICKS);
+            assertEquals(20 * 20, MinerModifier.FEAST_HASTE_TICKS);
+            assertEquals(1, MinerModifier.hasteFor(8).getAmplifier(), "8 以上だけ II");
+            assertEquals(0, MinerModifier.hasteFor(7).getAmplifier());
+            assertEquals(-0.50, MinerModifier.LOG_SPEED_MULTIPLIER, 1e-9);
         }
     }
 

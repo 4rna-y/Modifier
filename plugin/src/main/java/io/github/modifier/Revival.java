@@ -1,5 +1,6 @@
 package io.github.modifier;
 
+import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -26,5 +27,14 @@ final class Revival {
         player.setHealth(Math.max(1.0, maxHealth * HEALTH_RATIO));
         player.setFireTicks(0);
         player.playSound(player, Sound.ITEM_TOTEM_USE, 1.0f, 1.3f);
+    }
+
+    /** リスポーン地点へ飛ばす。無ければ主ワールドのスポーンへ。 */
+    static void sendHome(Player player) {
+        Location respawn = player.getRespawnLocation();
+        if (respawn == null) {
+            respawn = player.getServer().getWorlds().get(0).getSpawnLocation();
+        }
+        player.teleportAsync(respawn);
     }
 }

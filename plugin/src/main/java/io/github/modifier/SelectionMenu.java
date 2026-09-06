@@ -45,9 +45,10 @@ public final class SelectionMenu implements InventoryHolder {
         ItemStack item = ItemStack.of(modifier.iconBase());
         item.setData(DataComponentTypes.ITEM_MODEL, modifier.iconModel());
         item.setData(DataComponentTypes.ITEM_NAME, modifier.displayName());
-        item.setData(DataComponentTypes.LORE, ItemLore.lore()
-                .addLines(modifier.description())
-                .build());
+        ItemLore.Builder lore = ItemLore.lore().addLines(modifier.description());
+        // 道具をもらえるものは、説明の後にその旨を添える
+        StartingItems.describe(modifier.startingItems()).ifPresent(lore::addLine);
+        item.setData(DataComponentTypes.LORE, lore.build());
         // 土台アイテム由来の表示 (攻撃力など) が説明文に混ざらないようにする。
         item.setData(DataComponentTypes.TOOLTIP_DISPLAY, TooltipDisplay.tooltipDisplay()
                 .addHiddenComponents(DataComponentTypes.ATTRIBUTE_MODIFIERS)

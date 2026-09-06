@@ -90,7 +90,7 @@ class WorldResetE2eTest {
                         paperJar.getFileName().toString(), "nogui"));
         console.await("Done (", BOOT);
 
-        // 3択は19種からの抽選なので、狙ったものが出るまで引き直させる。要 OP。
+        // 3択は24種からの抽選なので、狙ったものが出るまで引き直させる。要 OP。
         console.send("op " + VICTIM);
         // 蘇生後の HP を見るので、自然回復で埋められると測れない。
         // 満腹度が満タンだと数秒で数 HP 戻ってしまう。
@@ -211,8 +211,9 @@ class WorldResetE2eTest {
     @Order(6)
     @DisplayName("2つのプラグインを同時に載せてもサーバー側に例外が出ない")
     void noServerExceptions() {
-        assertFalse(console.sawLine("Caused by:"),
-                "サーバーで例外が起きている" + console.tail());
+        assertFalse(console.sawLine("Caused by:") || console.sawLine("Could not pass event"),
+                "サーバーで例外が起きている (Error 系はスタックトレースに Caused by: が無いので、"
+                        + "イベント配送の失敗も見る)" + console.tail());
     }
 
     @Test

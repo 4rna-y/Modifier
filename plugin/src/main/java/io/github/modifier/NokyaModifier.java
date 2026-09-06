@@ -29,7 +29,7 @@ public final class NokyaModifier extends BaseModifier {
     public int weight() {
         // 死を打ち消すものの中で最も重い。隠し効果なので誰も知らないまま
         // 「ワールドが1回生き延びる」が起きる。頻繁に起きてはいけない。
-        return 2;
+        return 1;
     }
 
     @Override

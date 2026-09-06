@@ -9,22 +9,22 @@ import org.bukkit.event.entity.EntityRegainHealthEvent;
 /**
  * 黒の剣士。
  *
- * <p>敵対モブへ与えたダメージの10%だけ自分の HP が回復する。矢による攻撃も対象。
+ * <p>敵対モブへ与えたダメージの20%だけ自分の HP が回復する。矢による攻撃も対象。
  */
 public final class BlackSwordsmanModifier extends BaseModifier {
 
-    public static final double LIFESTEAL_RATIO = 0.10;
+    public static final double LIFESTEAL_RATIO = 0.20;
 
     public BlackSwordsmanModifier() {
         super("black_swordsman", "黒の剣士", Material.NETHERITE_SWORD,
                 "敵対モブへ与えたダメージの",
-                "10% を吸収して HP が回復する");
+                "20% を吸収して HP が回復する");
     }
 
     @Override
     public int weight() {
         // 対モブ限定の吸収。生存に効くが上限がある。
-        return 6;
+        return 5;
     }
 
     @Override

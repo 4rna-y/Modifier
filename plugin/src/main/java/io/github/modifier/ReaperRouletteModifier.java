@@ -49,7 +49,7 @@ public final class ReaperRouletteModifier extends BaseModifier {
     @Override
     public int weight() {
         // 自分は助かるが他人を巻き込む。ワールドの生死と他人への押し付けの両方に触る。
-        return 3;
+        return 2;
     }
 
     @Override

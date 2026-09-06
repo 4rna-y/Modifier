@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "io.github.modifier"
-version = "0.2.2"
+version = "0.3.0"
 
 repositories {
     mavenCentral()
@@ -61,6 +61,9 @@ val resourcePackZip = tasks.register<Zip>("resourcePackZip") {
 
 tasks.processResources {
     from(resourcePackZip)
+    // version は expand の中でしか使っていないので Gradle には見えない。宣言しないと
+    // 上げても paper-plugin.yml が古いままキャッシュから出てくる
+    inputs.property("version", project.version)
     filesMatching("paper-plugin.yml") {
         expand("version" to project.version)
     }

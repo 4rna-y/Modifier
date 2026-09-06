@@ -1,5 +1,7 @@
 package io.github.modifier;
 
+import java.util.List;
+
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.LivingEntity;
@@ -44,7 +46,12 @@ public final class ShieldBashModifier extends BaseModifier {
     @Override
     public int weight() {
         // 盾を構える技術が要る。受動的に強くならないのが良い。
-        return 8;
+        return 6;
+    }
+
+    @Override
+    public List<StartingItems.Item> startingItems() {
+        return List.of(StartingItems.Item.of(Material.SHIELD));
     }
 
     @Override

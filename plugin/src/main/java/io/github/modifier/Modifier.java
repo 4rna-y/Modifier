@@ -10,11 +10,16 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockDropItemEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityExhaustionEvent;
+import org.bukkit.event.entity.EntityPotionEffectEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerHarvestBlockEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
@@ -60,7 +65,7 @@ public interface Modifier {
      * 3択に出る重み。大きいほど出やすい。
      *
      * <p>出現率は「自分の重み ÷ 全体の重み」で決まるので、絶対値ではなく比だけが効く。
-     * 組み込みの19種は合計 100 に揃えてあり、重みがそのまま相対的な出やすさになる
+     * 組み込みの24種は合計 100 に揃えてあり、重みがそのまま相対的な出やすさになる
      * (実際の出現率は3つ引くぶん、これより高くなる)。
      *
      * <p>強さではなく「引いた人以外への影響」で決めている。とくに死を打ち消すものは
@@ -171,6 +176,59 @@ public interface Modifier {
 
     /** ブロックや空中を左右クリックしたとき。右クリックは両手ぶん飛んでくる。 */
     default void onInteract(Player player, PlayerInteractEvent event) {
+    }
+
+    /**
+     * 選んだときに受け取る道具。
+     *
+     * <p>選択の確定時に一度だけ持ち物へ入れる ({@link StartingItems#give})。
+     * 参加やリスポーンでは配り直さない。選択画面と {@code /m} の説明にも添えられる。
+     */
+    default List<StartingItems.Item> startingItems() {
+        return List.of();
+    }
+
+    /**
+     * 選択が確定した直後に呼ばれる。効果を掛ける前。
+     *
+     * <p>選んだ時点で決めるもの (よくばりの中身の抽選など) はここで行い、保存する。
+     */
+    default void onChosen(Player player) {
+    }
+
+    /**
+     * そのプレイヤーに実際に効かせるモディファイア。
+     *
+     * <p>ふつうは自分自身。よくばりのように「中身がプレイヤーごとに違う」ものは、
+     * ここで中身を束ねたものを返す。{@link ModifierEffects} は必ずこれを通してから配る。
+     */
+    default Modifier resolveFor(Player player) {
+        return this;
+    }
+
+    /** 釣り竿を使ったとき。投げた・掛かった・釣り上げた、のどの段階かは {@code event.getState()}。 */
+    default void onFish(Player player, PlayerFishEvent event) {
+    }
+
+    /** アイテムを捨てたとき。 */
+    default void onItemDrop(Player player, PlayerDropItemEvent event) {
+    }
+
+    /**
+     * エンティティにとどめを刺し、その落とし物が決まるとき。
+     *
+     * <p>{@link #onKill} より前の、まだ書き換えてよい段で呼ばれる。落とし物の加工はこちらで、
+     * 確定後の反応 (バフなど) は {@link #onKill} で行う。
+     */
+    default void onKillDrops(Player player, EntityDeathEvent event) {
+    }
+
+    /** ポーション効果が付く・変わる・消えるとき。食べ物由来かは {@code event.getCause()} で分かる。 */
+    default void onPotionEffect(Player player, EntityPotionEffectEvent event) {
+    }
+
+    /** 自分が死んだとき (打ち消されなかった場合のみ)。落とし物の後始末に使う。 */
+    default void onDeath(Player player, PlayerDeathEvent event) {
     }
 
     /** 定期的に呼ばれる。接地判定など、イベントで拾えないものに使う。 */

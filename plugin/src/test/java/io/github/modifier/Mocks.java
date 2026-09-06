@@ -50,6 +50,7 @@ final class Mocks {
                 net.kyori.adventure.util.TriState.NOT_SET;
         boolean onGround = true;
         boolean blocking;
+        boolean invulnerable;
         GameMode gameMode = GameMode.SURVIVAL;
         Vector velocity = new Vector(0, 0, 0);
         Location location;
@@ -199,12 +200,14 @@ final class Mocks {
         when(player.isFlying()).thenAnswer(i -> state.flying);
         when(player.isOnGround()).thenAnswer(i -> state.onGround);
         when(player.isBlocking()).thenAnswer(i -> state.blocking);
+        when(player.isInvulnerable()).thenAnswer(i -> state.invulnerable);
         when(player.isDead()).thenAnswer(i -> state.health <= 0);
         when(player.getVelocity()).thenAnswer(i -> state.velocity.clone());
 
         record$(player, state);
         attributes(player, state);
         inventory(player);
+        persistentData(player);
         return new FakePlayer(player, state);
     }
 
@@ -248,6 +251,10 @@ final class Mocks {
             return null;
         }).when(player).setFlying(org.mockito.ArgumentMatchers.anyBoolean());
         org.mockito.Mockito.doAnswer(i -> {
+            state.invulnerable = i.getArgument(0);
+            return null;
+        }).when(player).setInvulnerable(org.mockito.ArgumentMatchers.anyBoolean());
+        org.mockito.Mockito.doAnswer(i -> {
             state.flyingFallDamage = i.getArgument(0);
             return null;
         }).when(player).setFlyingFallDamage(any(net.kyori.adventure.util.TriState.class));
@@ -273,6 +280,25 @@ final class Mocks {
         }).when(player).sendMessage(any(net.kyori.adventure.text.Component.class));
     }
 
+    /** プレイヤーの PDC。型は見ず、キーごとに値を覚えるだけ。 */
+    private static void persistentData(Player player) {
+        Map<NamespacedKey, Object> values = new HashMap<>();
+        org.bukkit.persistence.PersistentDataContainer pdc =
+                mock(org.bukkit.persistence.PersistentDataContainer.class);
+        org.mockito.Mockito.doAnswer(i -> {
+            values.put(i.getArgument(0), i.getArgument(2));
+            return null;
+        }).when(pdc).set(any(), any(), any());
+        when(pdc.get(any(), any())).thenAnswer(i -> values.get((NamespacedKey) i.getArgument(0)));
+        when(pdc.has(any(), any())).thenAnswer(i -> values.containsKey((NamespacedKey) i.getArgument(0)));
+        when(pdc.has(any(NamespacedKey.class))).thenAnswer(i -> values.containsKey((NamespacedKey) i.getArgument(0)));
+        org.mockito.Mockito.doAnswer(i -> {
+            values.remove((NamespacedKey) i.getArgument(0));
+            return null;
+        }).when(pdc).remove(any());
+        when(player.getPersistentDataContainer()).thenReturn(pdc);
+    }
+
     /** attribute の付け外しを記録に反映させる。 */
     private static void attributes(Player player, PlayerState state) {
         Answer<AttributeInstance> instances = invocation -> {
@@ -295,6 +321,113 @@ final class Mocks {
             return instance;
         };
         when(player.getAttribute(any())).thenAnswer(instances);
+    }
+
+    /**
+     * 中身のある持ち物。{@code storage} は 36 スロット (0〜8 がホットバー) で、書き換えはその配列に反映される。
+     *
+     * @param heldSlot 利き手のスロット (0〜8)
+     */
+    static PlayerInventory backpack(Player player, ItemStack[] storage, int heldSlot, ItemStack offHand) {
+        ItemStack empty = mock(ItemStack.class);
+        when(empty.getType()).thenReturn(Material.AIR);
+        ItemStack[] off = {offHand};
+        PlayerInventory inventory = mock(PlayerInventory.class);
+        when(inventory.getStorageContents()).thenAnswer(i -> storage.clone());
+        when(inventory.getHeldItemSlot()).thenReturn(heldSlot);
+        when(inventory.getItem(org.mockito.ArgumentMatchers.anyInt()))
+                .thenAnswer(i -> storage[(int) i.getArgument(0)]);
+        org.mockito.Mockito.doAnswer(i -> {
+            storage[(int) i.getArgument(0)] = i.getArgument(1);
+            return null;
+        }).when(inventory).setItem(org.mockito.ArgumentMatchers.anyInt(), any());
+        when(inventory.getItemInMainHand())
+                .thenAnswer(i -> storage[heldSlot] == null ? empty : storage[heldSlot]);
+        when(inventory.getItemInOffHand()).thenAnswer(i -> off[0] == null ? empty : off[0]);
+        org.mockito.Mockito.doAnswer(i -> {
+            off[0] = i.getArgument(0);
+            return null;
+        }).when(inventory).setItemInOffHand(any());
+        when(player.getInventory()).thenReturn(inventory);
+        return inventory;
+    }
+
+    /**
+     * 個数・エンチャント・整数の印 (PDC) を持てるアイテム。
+     *
+     * <p>{@code clone()} と {@code withType()} は中身を写した別のアイテムを返す。
+     */
+    static ItemStack richItem(Material type, int amount) {
+        return richItem(type, amount, new HashMap<>(), new HashMap<>());
+    }
+
+    private static ItemStack richItem(Material type, int amount,
+            Map<org.bukkit.enchantments.Enchantment, Integer> enchants, Map<NamespacedKey, Integer> ints) {
+        ItemStack stack = mock(ItemStack.class);
+        int[] count = {amount};
+        when(stack.getType()).thenReturn(type);
+        when(stack.getAmount()).thenAnswer(i -> count[0]);
+        org.mockito.Mockito.doAnswer(i -> {
+            count[0] = i.getArgument(0);
+            return null;
+        }).when(stack).setAmount(org.mockito.ArgumentMatchers.anyInt());
+        when(stack.clone()).thenAnswer(i ->
+                richItem(type, count[0], new HashMap<>(enchants), new HashMap<>(ints)));
+        when(stack.withType(any())).thenAnswer(i ->
+                richItem(i.getArgument(0), count[0], new HashMap<>(enchants), new HashMap<>(ints)));
+
+        when(stack.getEnchantmentLevel(any())).thenAnswer(i -> enchants.getOrDefault(i.getArgument(0), 0));
+        when(stack.containsEnchantment(any())).thenAnswer(i -> enchants.containsKey(i.getArgument(0)));
+        when(stack.getEnchantments()).thenAnswer(i -> Map.copyOf(enchants));
+        org.mockito.Mockito.doAnswer(i -> {
+            enchants.put(i.getArgument(0), i.getArgument(1));
+            return null;
+        }).when(stack).addUnsafeEnchantment(any(), org.mockito.ArgumentMatchers.anyInt());
+        when(stack.removeEnchantment(any())).thenAnswer(i -> {
+            Integer removed = enchants.remove(i.getArgument(0));
+            return removed == null ? 0 : removed;
+        });
+
+        io.papermc.paper.persistence.PersistentDataContainerView view =
+                mock(io.papermc.paper.persistence.PersistentDataContainerView.class);
+        when(view.has(any(), org.mockito.ArgumentMatchers.eq(
+                org.bukkit.persistence.PersistentDataType.INTEGER)))
+                .thenAnswer(i -> ints.containsKey((NamespacedKey) i.getArgument(0)));
+        when(view.get(any(), org.mockito.ArgumentMatchers.eq(
+                org.bukkit.persistence.PersistentDataType.INTEGER)))
+                .thenAnswer(i -> ints.get((NamespacedKey) i.getArgument(0)));
+        when(stack.getPersistentDataContainer()).thenReturn(view);
+        org.bukkit.persistence.PersistentDataContainer container =
+                mock(org.bukkit.persistence.PersistentDataContainer.class);
+        org.mockito.Mockito.doAnswer(i -> {
+            ints.put(i.getArgument(0), i.getArgument(2));
+            return null;
+        }).when(container).set(any(), org.mockito.ArgumentMatchers.eq(
+                org.bukkit.persistence.PersistentDataType.INTEGER), org.mockito.ArgumentMatchers.anyInt());
+        org.mockito.Mockito.doAnswer(i -> {
+            ints.remove((NamespacedKey) i.getArgument(0));
+            return null;
+        }).when(container).remove(any());
+        when(stack.editPersistentDataContainer(any())).thenAnswer(i -> {
+            java.util.function.Consumer<org.bukkit.persistence.PersistentDataContainer> edit =
+                    i.getArgument(0);
+            edit.accept(container);
+            return true;
+        });
+        return stack;
+    }
+
+    /**
+     * エンチャントの最大レベルを決める。
+     *
+     * <p>テスト用の偽レジストリが返すダミーは 0 と答えるので、それを使う効果はここで立てる。
+     */
+    static void maxLevel(org.bukkit.enchantments.Enchantment enchantment, int level) {
+        if (java.lang.reflect.Proxy.isProxyClass(enchantment.getClass())) {
+            TestRegistryAccess.override(enchantment, "getMaxLevel", level);
+        } else {
+            when(enchantment.getMaxLevel()).thenReturn(level);
+        }
     }
 
     /** 手ぶらの持ち物。 */

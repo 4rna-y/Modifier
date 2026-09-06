@@ -63,6 +63,8 @@ public final class SelectionService {
                     "モディファイアが1つも登録されていないため、選択画面を開けません。");
             return;
         }
+        // 選び直し (/m select) で開く場合もここを通るので、守るのはここで
+        SelectionGuard.protect(player);
         player.openInventory(new SelectionMenu(choices, title()).getInventory());
     }
 

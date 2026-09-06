@@ -74,10 +74,10 @@ class SelectionE2eTest {
 
     @Test
     @Order(1)
-    @DisplayName("本番の jar が 26.1 のサーバーでも読み込まれ、19種が登録される")
+    @DisplayName("本番の jar が 26.1 のサーバーでも読み込まれ、24種が登録される")
     void pluginLoads() throws Exception {
         console.send("modifier status");
-        console.await("登録数: 19", Duration.ofSeconds(30));
+        console.await("登録数: 24", Duration.ofSeconds(30));
         assertTrue(console.sawLine("リソースパックを配信します"),
                 "パックの配信が始まっていない" + console.tail());
     }
@@ -359,8 +359,9 @@ class SelectionE2eTest {
     @Order(10)
     @DisplayName("一連の検証でサーバー側に例外が出ていない")
     void noServerExceptions() {
-        assertFalse(console.sawLine("Caused by:"),
-                "サーバーで例外が起きている" + console.tail());
+        assertFalse(console.sawLine("Caused by:") || console.sawLine("Could not pass event"),
+                "サーバーで例外が起きている (Error 系はスタックトレースに Caused by: が無いので、"
+                        + "イベント配送の失敗も見る)" + console.tail());
         assertTrue(console.isAlive(), "サーバーが落ちている" + console.tail());
     }
 

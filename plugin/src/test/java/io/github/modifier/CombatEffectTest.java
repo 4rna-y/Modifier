@@ -75,11 +75,11 @@ class CombatEffectTest {
         private final BlackSwordsmanModifier swordsman = new BlackSwordsmanModifier();
 
         @Test
-        @DisplayName("敵対モブへ与えたダメージの 10% を吸収する")
+        @DisplayName("敵対モブへ与えたダメージの 20% を吸収する")
         void stealsLifeFromEnemies() {
             me.state().health = 10.0;
             swordsman.onDealtDamage(me.player(), hit(me.player(), zombie(), 8.0));
-            assertEquals(List.of(0.8), me.state().healed);
+            assertEquals(List.of(1.6), me.state().healed);
         }
 
         @Test

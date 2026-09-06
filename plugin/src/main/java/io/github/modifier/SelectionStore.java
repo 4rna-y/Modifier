@@ -1,5 +1,6 @@
 package io.github.modifier;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.bukkit.NamespacedKey;
@@ -24,6 +25,8 @@ public final class SelectionStore {
     private static final NamespacedKey SELECTED = new NamespacedKey("modifier", "selected");
     private static final NamespacedKey SELECTED_WORLD = new NamespacedKey("modifier", "selected-world");
     private static final NamespacedKey CHARGE_USED = new NamespacedKey("modifier", "charge-used");
+    /** よくばりが引いた中身。id をカンマ区切りで持つ。 */
+    private static final NamespacedKey BUNDLE = new NamespacedKey("modifier", "bundle");
 
     private final Server server;
 
@@ -67,6 +70,7 @@ public final class SelectionStore {
         pdc.set(SELECTED_WORLD, PersistentDataType.STRING, currentWorldId());
         // 選び直したら一度きりの効果も新品に戻す
         pdc.remove(CHARGE_USED);
+        pdc.remove(BUNDLE);
     }
 
     public void clear(Player player) {
@@ -74,6 +78,21 @@ public final class SelectionStore {
         pdc.remove(SELECTED);
         pdc.remove(SELECTED_WORLD);
         pdc.remove(CHARGE_USED);
+        pdc.remove(BUNDLE);
+    }
+
+    /** よくばりが引いた中身を保存する。選択と一緒に消える。 */
+    public void setBundle(Player player, List<String> ids) {
+        player.getPersistentDataContainer().set(BUNDLE, PersistentDataType.STRING, String.join(",", ids));
+    }
+
+    /** よくばりが引いた中身。無ければ空。 */
+    public List<String> bundle(Player player) {
+        String stored = player.getPersistentDataContainer().get(BUNDLE, PersistentDataType.STRING);
+        if (stored == null || stored.isBlank()) {
+            return List.of();
+        }
+        return List.of(stored.split(","));
     }
 
     /** 一度きりの効果がまだ残っているか。 */

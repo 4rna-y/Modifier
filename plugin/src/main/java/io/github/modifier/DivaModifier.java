@@ -1,6 +1,7 @@
 package io.github.modifier;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -49,8 +50,13 @@ public final class DivaModifier extends BaseModifier {
 
     @Override
     public int weight() {
-        // 下方修正は無いが、音符ブロックを用意し、周りに人が居てこそ。ソロだと微妙な自己回復。
+        // 下方修正は無いが、周りに人が居てこそ。ソロだと微妙な自己回復。
         return 4;
+    }
+
+    @Override
+    public List<StartingItems.Item> startingItems() {
+        return List.of(StartingItems.Item.of(Material.NOTE_BLOCK));
     }
 
     @Override

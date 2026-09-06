@@ -24,16 +24,17 @@ class ModifierRegistryTest {
             mock(Plugin.class), new SelectionStore(mock(Server.class)), new Random(0));
 
     @Test
-    @DisplayName("仕様どおり19種が登録されている")
-    void allNineteenAreRegistered() {
-        assertEquals(19, registry.all().size());
+    @DisplayName("仕様どおり24種が登録されている")
+    void allTwentyFourAreRegistered() {
+        assertEquals(24, registry.all().size());
         Set<String> ids = new HashSet<>(registry.all().stream().map(Modifier::id).toList());
         for (String id : new String[] {
                 "fat", "swiftness_boots", "shield_bash",
                 "aho", "serf", "dopagaki", "reaper_roulette", "sneer",
                 "black_swordsman", "landmine", "healer", "food_poisoning",
                 "clown", "insomnia", "leader", "nokya",
-                "chef", "regret", "diva"}) {
+                "chef", "regret", "diva", "fishers", "miner", "butcher",
+                "creeper_insurance", "greedy"}) {
             assertTrue(ids.contains(id), id + " が登録されていない");
         }
     }
@@ -93,7 +94,7 @@ class ModifierRegistryTest {
     void deathInterceptorsAreRare() {
         // wiah と組み合わせると、これらは「ワールドがもう一度だけ死を許す」効果になる。
         // 標準の重み未満であることを崩さない。
-        for (String id : new String[] {"nokya", "sneer", "reaper_roulette"}) {
+        for (String id : new String[] {"nokya", "sneer", "reaper_roulette", "creeper_insurance"}) {
             int weight = registry.byId(id).orElseThrow().weight();
             assertTrue(weight < Modifier.DEFAULT_WEIGHT,
                     id + " の重み " + weight + " が標準 " + Modifier.DEFAULT_WEIGHT + " 以上ある");
@@ -141,7 +142,7 @@ class ModifierRegistryTest {
             }
         }
 
-        // 一番軽い無キャ (2) と、一番重い後悔 (10) の差は 5 倍あるはず
+        // 一番軽い無キャ (1) と、一番重い後悔 (8) の差は 8 倍あるはず
         int lightest = hits.getOrDefault("nokya", 0);
         int heaviest = hits.getOrDefault("regret", 0);
         assertTrue(heaviest > lightest * 3,

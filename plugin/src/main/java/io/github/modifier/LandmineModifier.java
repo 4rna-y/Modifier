@@ -1,5 +1,7 @@
 package io.github.modifier;
 
+import java.util.List;
+
 import org.bukkit.Material;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Enemy;
@@ -31,7 +33,12 @@ public final class LandmineModifier extends BaseModifier {
     @Override
     public int weight() {
         // 弓限定で満腹度が対価。爆発は近くの味方にも当たるので、標準より下げる。
-        return 5;
+        return 4;
+    }
+
+    @Override
+    public List<StartingItems.Item> startingItems() {
+        return List.of(StartingItems.Item.of(Material.BOW), StartingItems.Item.of(Material.ARROW, 16));
     }
 
     @Override

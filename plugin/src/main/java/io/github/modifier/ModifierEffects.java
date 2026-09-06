@@ -22,10 +22,14 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityExhaustionEvent;
+import org.bukkit.event.entity.EntityPotionEffectEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerHarvestBlockEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
@@ -73,9 +77,10 @@ public final class ModifierEffects implements Listener {
         this.nameTag = nameTag;
     }
 
-    /** そのプレイヤーが今選んでいるモディファイア。 */
+    /** そのプレイヤーに今効いているモディファイア。よくばりなら中身を束ねたもの。 */
     public Optional<Modifier> active(Player player) {
-        return store.selectedId(player).flatMap(registry::byId);
+        return store.selectedId(player).flatMap(registry::byId)
+                .map(modifier -> modifier.resolveFor(player));
     }
 
     /**
@@ -311,6 +316,44 @@ public final class ModifierEffects implements Listener {
     public void onInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
         active(player).ifPresent(modifier -> modifier.onInteract(player, event));
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onFish(PlayerFishEvent event) {
+        Player player = event.getPlayer();
+        active(player).ifPresent(modifier -> modifier.onFish(player, event));
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onItemDrop(PlayerDropItemEvent event) {
+        Player player = event.getPlayer();
+        active(player).ifPresent(modifier -> modifier.onItemDrop(player, event));
+    }
+
+    // 落とし物の加工。確定後にだけ反応する onKill (MONITOR) より手前の、まだ書き換えてよい段で配る
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onKillDrops(EntityDeathEvent event) {
+        Player killer = event.getEntity().getKiller();
+        if (killer == null) {
+            return;
+        }
+        active(killer).ifPresent(modifier -> modifier.onKillDrops(killer, event));
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPotionEffect(EntityPotionEffectEvent event) {
+        // getEntity() の戻り型が 26.1 (Entity) と 26.2 (LivingEntity) で違う。26.2 でコンパイルした
+        // 呼び出しは 26.1 で NoSuchMethodError になるので、両方にある EntityEvent の方を呼ぶ
+        if (((org.bukkit.event.entity.EntityEvent) event).getEntity() instanceof Player player) {
+            active(player).ifPresent(modifier -> modifier.onPotionEffect(player, event));
+        }
+    }
+
+    // 死亡は他プラグインにキャンセルされうるので、落とし物を触るのは HIGH で、確定を待ってから
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onDeath(PlayerDeathEvent event) {
+        Player player = event.getEntity();
+        active(player).ifPresent(modifier -> modifier.onDeath(player, event));
     }
 
     @EventHandler
