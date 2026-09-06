@@ -1,5 +1,6 @@
 package io.github.modifier;
 
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,6 +25,8 @@ public final class SelectionListener implements Listener {
     private final SelectionStore store;
     private final ResourcePackService resourcePack;
     private final ModifierEffects effects;
+    /** ウェルカムギフトの当たり判定。 */
+    private final Random random;
 
     /**
      * 選択画面をまだ開いていないプレイヤー。
@@ -35,12 +38,14 @@ public final class SelectionListener implements Listener {
     private final Set<UUID> awaitingOpen = ConcurrentHashMap.newKeySet();
 
     public SelectionListener(ModifierPlugin plugin, SelectionService selection,
-            SelectionStore store, ResourcePackService resourcePack, ModifierEffects effects) {
+            SelectionStore store, ResourcePackService resourcePack, ModifierEffects effects,
+            Random random) {
         this.plugin = plugin;
         this.selection = selection;
         this.store = store;
         this.resourcePack = resourcePack;
         this.effects = effects;
+        this.random = random;
     }
 
     @EventHandler
@@ -123,6 +128,11 @@ public final class SelectionListener implements Listener {
         SelectionGuard.release(player);
         // 道具をもらえるものは、この一度だけ配る。よくばりなら中身のぶんも
         StartingItems.give(player, modifier.resolveFor(player).startingItems());
+        // ウェルカムギフトはこのワールドで初めて選んだときだけ。選び直しでは配らない
+        if (!store.welcomedHere(player)) {
+            WelcomeGift.give(player, random);
+            store.markWelcomed(player);
+        }
 
         player.sendMessage(plugin.message("<green>"
                 + PlainTextComponentSerializer.plainText().serialize(modifier.displayName())

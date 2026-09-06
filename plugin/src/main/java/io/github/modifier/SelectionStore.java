@@ -27,6 +27,8 @@ public final class SelectionStore {
     private static final NamespacedKey CHARGE_USED = new NamespacedKey("modifier", "charge-used");
     /** よくばりが引いた中身。id をカンマ区切りで持つ。 */
     private static final NamespacedKey BUNDLE = new NamespacedKey("modifier", "bundle");
+    /** ウェルカムギフトを渡したワールドの UID。選び直しでは消えず、ワールドが変われば効かなくなる。 */
+    private static final NamespacedKey WELCOMED = new NamespacedKey("modifier", "welcomed");
 
     private final Server server;
 
@@ -79,6 +81,17 @@ public final class SelectionStore {
         pdc.remove(SELECTED_WORLD);
         pdc.remove(CHARGE_USED);
         pdc.remove(BUNDLE);
+    }
+
+    /** このワールドでウェルカムギフトを受け取り済みか。 */
+    public boolean welcomedHere(Player player) {
+        String stored = player.getPersistentDataContainer().get(WELCOMED, PersistentDataType.STRING);
+        return stored != null && stored.equals(currentWorldId());
+    }
+
+    /** このワールドでウェルカムギフトを渡したことにする。{@link #clear} では消えない。 */
+    public void markWelcomed(Player player) {
+        player.getPersistentDataContainer().set(WELCOMED, PersistentDataType.STRING, currentWorldId());
     }
 
     /** よくばりが引いた中身を保存する。選択と一緒に消える。 */

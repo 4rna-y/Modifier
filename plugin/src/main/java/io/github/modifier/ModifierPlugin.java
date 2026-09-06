@@ -41,7 +41,7 @@ public final class ModifierPlugin extends JavaPlugin {
         resourcePack.start();
 
         getServer().getPluginManager().registerEvents(
-                new SelectionListener(this, selection, store, resourcePack, effects), this);
+                new SelectionListener(this, selection, store, resourcePack, effects, random), this);
         getServer().getPluginManager().registerEvents(effects, this);
 
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event ->
