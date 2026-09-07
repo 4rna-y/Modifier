@@ -26,20 +26,26 @@ import org.bukkit.util.Vector;
 /**
  * フィッシャーズ。
  *
- * <p>手に持った釣り竿に、常に最大レベルの宝釣りが付く。釣り竿の耐久値は減らない。
+ * <p>手に持った釣り竿に、常に最大レベルの入れ食いが付く。釣り竿の耐久値は減らない。
  * ただし釣り上げたとき 10% でシルバーフィッシュが掛かる。選ぶと釣り竿を1本もらえる。
  *
- * <p>宝釣りは<b>貸している</b>だけで、手から離れると外れる。付けるときに元のレベルを印
+ * <p>入れ食いは<b>貸している</b>だけで、手から離れると外れる。付けるときに元のレベルを印
  * ({@link #LENT_KEY}) として持たせ、外すときにそのレベルへ戻すので、自前で付けてあった
- * 宝釣りは消えない。自前で最大レベルなら何もしない。
+ * 入れ食いは消えない。自前で最大レベルなら何もしない。
+ *
+ * <p>v0.3.2 以前は宝釣りを貸していた。当時の印が残る釣り竿は {@link #returnOldLoan} が
+ * 片付ける。
  *
  * <p>「手」は利き手とオフハンドの両方。付け外しは {@link #tick} が持ち物を見て行い、
  * 持ち物の外へ出る経路 (捨てる・別のインベントリへ移す・死んで落とす) ではその場で外す。
  */
 public final class FishersModifier extends BaseModifier {
 
-    /** 貸した宝釣りの印。値は貸す前に付いていた宝釣りのレベル (無ければ 0)。 */
-    public static final NamespacedKey LENT_KEY = new NamespacedKey("modifier", "fishers_lent");
+    /** 貸した入れ食いの印。値は貸す前に付いていた入れ食いのレベル (無ければ 0)。 */
+    public static final NamespacedKey LENT_KEY = new NamespacedKey("modifier", "fishers_lent_lure");
+
+    /** 入れ食いにする前 (v0.3.2 以前) に貸していた宝釣りの印。値は宝釣りのレベル。 */
+    public static final NamespacedKey OLD_LENT_KEY = new NamespacedKey("modifier", "fishers_lent");
 
     public static final double SILVERFISH_CHANCE = 0.10;
 
@@ -47,7 +53,7 @@ public final class FishersModifier extends BaseModifier {
 
     public FishersModifier(Random random) {
         super("fishers", "フィッシャーズ", Material.FISHING_ROD,
-                "手に持った釣り竿に 宝釣り III が付く",
+                "手に持った釣り竿に 入れ食い III が付く",
                 "釣り竿の耐久値が減らない",
                 "10% でシルバーフィッシュが釣れる");
         this.random = random;
@@ -64,34 +70,59 @@ public final class FishersModifier extends BaseModifier {
         return List.of(StartingItems.Item.of(Material.FISHING_ROD));
     }
 
-    // ---- 宝釣りの貸し借り ----------------------------------------------------
+    // ---- 入れ食いの貸し借り ----------------------------------------------------
 
     /**
-     * 手にある釣り竿に宝釣りを貸す。
+     * 手にある釣り竿に入れ食いを貸す。
      *
      * @return 変えたか。貸してあるか、自前で最大なら false
      */
     static boolean lend(ItemStack rod) {
+        boolean returned = returnOldLoan(rod);
         if (rod.getPersistentDataContainer().has(LENT_KEY, PersistentDataType.INTEGER)) {
-            return false;
+            return returned;
         }
-        int max = Enchantment.LUCK_OF_THE_SEA.getMaxLevel();
-        int own = rod.getEnchantmentLevel(Enchantment.LUCK_OF_THE_SEA);
+        int max = Enchantment.LURE.getMaxLevel();
+        int own = rod.getEnchantmentLevel(Enchantment.LURE);
         if (own >= max) {
-            return false;
+            return returned;
         }
         rod.editPersistentDataContainer(pdc -> pdc.set(LENT_KEY, PersistentDataType.INTEGER, own));
-        rod.addUnsafeEnchantment(Enchantment.LUCK_OF_THE_SEA, max);
+        rod.addUnsafeEnchantment(Enchantment.LURE, max);
         return true;
     }
 
     /**
-     * 貸した宝釣りを返してもらう。元のレベルがあればそれに戻す。
+     * 貸した入れ食いを返してもらう。元のレベルがあればそれに戻す。
      *
      * @return 変えたか。貸していなければ false
      */
     static boolean reclaim(ItemStack rod) {
+        boolean returned = returnOldLoan(rod);
         Integer own = rod.getPersistentDataContainer().get(LENT_KEY, PersistentDataType.INTEGER);
+        if (own == null) {
+            return returned;
+        }
+        rod.removeEnchantment(Enchantment.LURE);
+        if (own > 0) {
+            rod.addUnsafeEnchantment(Enchantment.LURE, own);
+        }
+        rod.editPersistentDataContainer(pdc -> pdc.remove(LENT_KEY));
+        return true;
+    }
+
+    /**
+     * 宝釣りを貸していた頃 (v0.3.2 以前) の印が残っていれば、宝釣りを元のレベルへ戻して
+     * 印を消す。
+     *
+     * <p>更新した時点で手にあった釣り竿には、古い印と貸した宝釣り III が残る。古い印は
+     * {@link #LENT_KEY} とは別の名前なので放っておくと誰も外さず、宝釣りが永久に残って
+     * しまう。釣り竿に触るたび ({@link #lend} と {@link #reclaim} の頭) ここで片付ける。
+     *
+     * @return 変えたか。古い印が無ければ false
+     */
+    static boolean returnOldLoan(ItemStack rod) {
+        Integer own = rod.getPersistentDataContainer().get(OLD_LENT_KEY, PersistentDataType.INTEGER);
         if (own == null) {
             return false;
         }
@@ -99,7 +130,7 @@ public final class FishersModifier extends BaseModifier {
         if (own > 0) {
             rod.addUnsafeEnchantment(Enchantment.LUCK_OF_THE_SEA, own);
         }
-        rod.editPersistentDataContainer(pdc -> pdc.remove(LENT_KEY));
+        rod.editPersistentDataContainer(pdc -> pdc.remove(OLD_LENT_KEY));
         return true;
     }
 

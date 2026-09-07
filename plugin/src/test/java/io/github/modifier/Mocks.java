@@ -331,6 +331,9 @@ final class Mocks {
     static PlayerInventory backpack(Player player, ItemStack[] storage, int heldSlot, ItemStack offHand) {
         ItemStack empty = mock(ItemStack.class);
         when(empty.getType()).thenReturn(Material.AIR);
+        // 26.x の Material#isAir はレジストリの BlockType に委譲するので、空気を空気にしておく。
+        // ここで立てないと、空の手を空と見なす効果 (採掘師) が他のテストの実行順に左右される
+        TestRegistryAccess.override(Material.AIR.asBlockType(), "isAir", true);
         ItemStack[] off = {offHand};
         PlayerInventory inventory = mock(PlayerInventory.class);
         when(inventory.getStorageContents()).thenAnswer(i -> storage.clone());

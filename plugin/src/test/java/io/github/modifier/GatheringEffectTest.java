@@ -106,12 +106,12 @@ class GatheringEffectTest {
         private final ItemStack[] storage = new ItemStack[36];
 
         @BeforeEach
-        void luckOfTheSeaGoesToThree() {
-            Mocks.maxLevel(Enchantment.LUCK_OF_THE_SEA, 3);
+        void lureGoesToThree() {
+            Mocks.maxLevel(Enchantment.LURE, 3);
         }
 
         @Test
-        @DisplayName("手に持った釣り竿に宝釣り III が付き、元のレベル 0 が印に残る")
+        @DisplayName("手に持った釣り竿に入れ食い III が付き、元のレベル 0 が印に残る")
         void lendsToTheHeldRod() {
             ItemStack rod = Mocks.richItem(Material.FISHING_ROD, 1);
             storage[0] = rod;
@@ -119,26 +119,26 @@ class GatheringEffectTest {
 
             fishers.tick(me.player());
 
-            assertEquals(3, rod.getEnchantmentLevel(Enchantment.LUCK_OF_THE_SEA));
+            assertEquals(3, rod.getEnchantmentLevel(Enchantment.LURE));
             assertEquals(0, lentLevel(rod), "貸す前のレベルを覚えておく");
         }
 
         @Test
-        @DisplayName("手に無い釣り竿には付かず、手から離すと自前の宝釣り I に戻る")
+        @DisplayName("手に無い釣り竿には付かず、手から離すと自前の入れ食い I に戻る")
         void reclaimsWhenNotHeld() {
             ItemStack rod = Mocks.richItem(Material.FISHING_ROD, 1);
-            rod.addUnsafeEnchantment(Enchantment.LUCK_OF_THE_SEA, 1);
+            rod.addUnsafeEnchantment(Enchantment.LURE, 1);
             storage[3] = rod;
             Mocks.backpack(me.player(), storage, 3, null);
             fishers.tick(me.player());
-            assertEquals(3, rod.getEnchantmentLevel(Enchantment.LUCK_OF_THE_SEA));
+            assertEquals(3, rod.getEnchantmentLevel(Enchantment.LURE));
             assertEquals(1, lentLevel(rod));
 
             // 別のスロットを持つ
             Mocks.backpack(me.player(), storage, 0, null);
             fishers.tick(me.player());
 
-            assertEquals(1, rod.getEnchantmentLevel(Enchantment.LUCK_OF_THE_SEA), "自前の I に戻る");
+            assertEquals(1, rod.getEnchantmentLevel(Enchantment.LURE), "自前の I に戻る");
             assertNull(lentLevel(rod), "印も消える");
         }
 
@@ -146,14 +146,14 @@ class GatheringEffectTest {
         @DisplayName("自前で III が付いていれば触らない")
         void leavesMaxedRodsAlone() {
             ItemStack rod = Mocks.richItem(Material.FISHING_ROD, 1);
-            rod.addUnsafeEnchantment(Enchantment.LUCK_OF_THE_SEA, 3);
+            rod.addUnsafeEnchantment(Enchantment.LURE, 3);
             storage[0] = rod;
             Mocks.backpack(me.player(), storage, 0, null);
 
             fishers.tick(me.player());
 
             assertNull(lentLevel(rod), "貸していないので印も無い");
-            assertEquals(3, rod.getEnchantmentLevel(Enchantment.LUCK_OF_THE_SEA));
+            assertEquals(3, rod.getEnchantmentLevel(Enchantment.LURE));
         }
 
         @Test
@@ -164,7 +164,7 @@ class GatheringEffectTest {
 
             fishers.tick(me.player());
 
-            assertEquals(3, rod.getEnchantmentLevel(Enchantment.LUCK_OF_THE_SEA));
+            assertEquals(3, rod.getEnchantmentLevel(Enchantment.LURE));
         }
 
         @Test
@@ -176,8 +176,49 @@ class GatheringEffectTest {
 
             fishers.tick(me.player());
 
-            assertEquals(0, sword.getEnchantmentLevel(Enchantment.LUCK_OF_THE_SEA));
+            assertEquals(0, sword.getEnchantmentLevel(Enchantment.LURE));
             assertNull(lentLevel(sword));
+        }
+
+        /** v0.3.2 以前の版が宝釣りを貸した釣り竿。 */
+        private ItemStack oldLentRod(int ownLuck) {
+            ItemStack rod = Mocks.richItem(Material.FISHING_ROD, 1);
+            rod.editPersistentDataContainer(pdc ->
+                    pdc.set(FishersModifier.OLD_LENT_KEY, PersistentDataType.INTEGER, ownLuck));
+            rod.addUnsafeEnchantment(Enchantment.LUCK_OF_THE_SEA, 3);
+            return rod;
+        }
+
+        @Test
+        @DisplayName("宝釣りを貸したままの釣り竿は、手にあれば入れ食いに貸し替わる")
+        void migratesHeldRod() {
+            ItemStack rod = oldLentRod(0);
+            storage[0] = rod;
+            Mocks.backpack(me.player(), storage, 0, null);
+
+            fishers.tick(me.player());
+
+            assertEquals(0, rod.getEnchantmentLevel(Enchantment.LUCK_OF_THE_SEA), "古い貸し出しは返す");
+            assertNull(rod.getPersistentDataContainer()
+                    .get(FishersModifier.OLD_LENT_KEY, PersistentDataType.INTEGER), "古い印も消える");
+            assertEquals(3, rod.getEnchantmentLevel(Enchantment.LURE));
+            assertEquals(0, lentLevel(rod));
+        }
+
+        @Test
+        @DisplayName("宝釣りを貸したままの釣り竿は、手に無ければ自前のレベルへ戻る")
+        void migratesStowedRod() {
+            ItemStack rod = oldLentRod(1);
+            storage[3] = rod;
+            Mocks.backpack(me.player(), storage, 0, null);
+
+            fishers.tick(me.player());
+
+            assertEquals(1, rod.getEnchantmentLevel(Enchantment.LUCK_OF_THE_SEA), "自前の宝釣り I に戻る");
+            assertEquals(0, rod.getEnchantmentLevel(Enchantment.LURE), "手に無いので入れ食いは付かない");
+            assertNull(rod.getPersistentDataContainer()
+                    .get(FishersModifier.OLD_LENT_KEY, PersistentDataType.INTEGER));
+            assertNull(lentLevel(rod));
         }
 
         private ItemStack lentRod() {
@@ -195,7 +236,7 @@ class GatheringEffectTest {
 
             fishers.onItemDrop(me.player(), new PlayerDropItemEvent(me.player(), drop));
 
-            assertEquals(0, rod.getEnchantmentLevel(Enchantment.LUCK_OF_THE_SEA));
+            assertEquals(0, rod.getEnchantmentLevel(Enchantment.LURE));
             verify(drop).setItemStack(rod);
         }
 
@@ -212,7 +253,7 @@ class GatheringEffectTest {
 
             fishers.onInventoryClick(me.player(), event);
 
-            assertEquals(0, rod.getEnchantmentLevel(Enchantment.LUCK_OF_THE_SEA));
+            assertEquals(0, rod.getEnchantmentLevel(Enchantment.LURE));
             assertNull(lentLevel(rod));
         }
 
@@ -225,7 +266,7 @@ class GatheringEffectTest {
 
             fishers.onDeath(me.player(), death);
 
-            assertEquals(0, rod.getEnchantmentLevel(Enchantment.LUCK_OF_THE_SEA));
+            assertEquals(0, rod.getEnchantmentLevel(Enchantment.LURE));
         }
 
         @Test
@@ -238,8 +279,8 @@ class GatheringEffectTest {
 
             fishers.remove(me.player());
 
-            assertEquals(0, held.getEnchantmentLevel(Enchantment.LUCK_OF_THE_SEA));
-            assertEquals(0, off.getEnchantmentLevel(Enchantment.LUCK_OF_THE_SEA));
+            assertEquals(0, held.getEnchantmentLevel(Enchantment.LURE));
+            assertEquals(0, off.getEnchantmentLevel(Enchantment.LURE));
         }
 
         @Test
