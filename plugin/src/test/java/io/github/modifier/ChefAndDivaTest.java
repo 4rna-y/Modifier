@@ -343,7 +343,7 @@ class ChefAndDivaTest {
         }
 
         @Test
-        @DisplayName("鳴らすと半径内の全員 (自分含む) に2秒の再生 II")
+        @DisplayName("鳴らすと半径内の全員 (自分含む) に 45秒の耐性 I・再生 II・発光")
         void singsToEveryoneNearby() {
             Mocks.FakePlayer friend = at("Friend", 5, 0);
             nearby(me, friend);
@@ -353,10 +353,22 @@ class ChefAndDivaTest {
 
             for (Mocks.FakePlayer target : List.of(me, friend)) {
                 assertTrue(hasRegeneration(target), target.player().getName());
-                PotionEffect effect = target.state().potionEffects.get(0);
-                assertEquals(DivaModifier.DURATION_TICKS, effect.getDuration());
-                assertEquals(DivaModifier.AMPLIFIER, effect.getAmplifier());
+                assertEquals(3, target.state().potionEffects.size(), target.player().getName());
+                for (PotionEffect effect : target.state().potionEffects) {
+                    assertEquals(DivaModifier.DURATION_TICKS, effect.getDuration());
+                    assertEquals(45 * 20, effect.getDuration());
+                }
+                assertEquals(DivaModifier.RESISTANCE_AMPLIFIER, amplifierOf(target, PotionEffectType.RESISTANCE));
+                assertEquals(DivaModifier.REGENERATION_AMPLIFIER, amplifierOf(target, PotionEffectType.REGENERATION));
+                assertEquals(DivaModifier.GLOWING_AMPLIFIER, amplifierOf(target, PotionEffectType.GLOWING));
             }
+        }
+
+        private static int amplifierOf(Mocks.FakePlayer player, PotionEffectType type) {
+            return player.state().potionEffects.stream()
+                    .filter(effect -> effect.getType() == type)
+                    .mapToInt(PotionEffect::getAmplifier)
+                    .findFirst().orElseThrow(() -> new AssertionError(type + " が付いていない"));
         }
 
         @Test
@@ -431,20 +443,21 @@ class ChefAndDivaTest {
         }
 
         @Test
-        @DisplayName("10秒に一度しか歌えない")
+        @DisplayName("2分30秒に一度しか歌えない")
         void cooldown() {
+            assertEquals(150 * 20, DivaModifier.COOLDOWN_TICKS);
             nearby(me);
             Mocks.installCurrentTick(server, 1000);
             diva.onInteract(me.player(), play());
-            assertEquals(1, me.state().potionEffects.size());
+            assertEquals(3, me.state().potionEffects.size());
 
             Mocks.installCurrentTick(server, 1000 + (int) DivaModifier.COOLDOWN_TICKS - 1);
             diva.onInteract(me.player(), play());
-            assertEquals(1, me.state().potionEffects.size(), "まだ歌えない");
+            assertEquals(3, me.state().potionEffects.size(), "まだ歌えない");
 
             Mocks.installCurrentTick(server, 1000 + (int) DivaModifier.COOLDOWN_TICKS);
             diva.onInteract(me.player(), play());
-            assertEquals(2, me.state().potionEffects.size(), "10秒経てば歌える");
+            assertEquals(6, me.state().potionEffects.size(), "2分30秒経てば歌える");
         }
 
         @Test
@@ -469,14 +482,15 @@ class ChefAndDivaTest {
             diva.onInteract(me.player(), play());
             diva.remove(me.player());
             diva.onInteract(me.player(), play());
-            assertEquals(2, me.state().potionEffects.size());
+            assertEquals(6, me.state().potionEffects.size());
         }
 
         @Test
         @DisplayName("何かしらの効果は必ず入る長さ・強さになっている")
         void actuallyHeals() {
-            // 再生 I は 50 tick に 1 回。2秒 (40 tick) だと一度も回復しないことがある
-            assertTrue(DivaModifier.AMPLIFIER >= 1, "再生 II 以上でないと 2秒では回復しないことがある");
+            // 再生 I は 50 tick に 1 回。II なら 25 tick ごとに入る
+            assertTrue(DivaModifier.REGENERATION_AMPLIFIER >= 1, "再生 II 以上");
+            assertTrue(DivaModifier.DURATION_TICKS >= 50, "再生が一度も入らない長さでは意味が無い");
             assertNotNull(PotionEffectType.REGENERATION);
         }
     }

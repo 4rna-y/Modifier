@@ -21,8 +21,8 @@ import org.bukkit.potion.PotionEffectType;
 /**
  * 歌姫。
  *
- * <p>音符ブロックを鳴らすと、半径10m の全プレイヤー (自分を含む) に2秒間の再生を配る。
- * 10秒に一度しか歌えない。
+ * <p>音符ブロックを鳴らすと、半径10m の全プレイヤー (自分を含む) に 45秒間の耐性 I・再生 II・発光を配る。
+ * 2分30秒に一度しか歌えない。発光は味方の位置が壁越しに分かる反面、敵対的な相手にも見える。
  *
  * <p>「鳴らす」はプレイヤー自身の操作 (右クリックか殴る) だけ。レッドストーンで鳴ったものは
  * 誰の歌か分からないので数えない。バニラが鳴らさない状況 (上が塞がっている、
@@ -31,21 +31,23 @@ import org.bukkit.potion.PotionEffectType;
 public final class DivaModifier extends BaseModifier {
 
     public static final double RADIUS = 10.0;
-    public static final int DURATION_TICKS = 2 * 20;
-    /**
-     * 再生 II。I は 50 tick に 1 回しか回復せず、2秒だと一度も回復しないまま終わりうる。
-     * II なら 25 tick ごとなので、2秒で 1〜2 回 (1〜2 HP) は確実に入る。
-     */
-    public static final int AMPLIFIER = 1;
-    public static final long COOLDOWN_TICKS = 10 * 20;
+    public static final int DURATION_TICKS = 45 * 20;
+    /** 耐性 I。 */
+    public static final int RESISTANCE_AMPLIFIER = 0;
+    /** 再生 II。25 tick ごとに 1 HP なので、45秒で 36 HP 分。 */
+    public static final int REGENERATION_AMPLIFIER = 1;
+    /** 発光。 */
+    public static final int GLOWING_AMPLIFIER = 0;
+    /** 2分30秒。効果が 45秒あるので、歌える時間は全体の 3 割ほど。 */
+    public static final long COOLDOWN_TICKS = 150 * 20;
 
     private final Map<UUID, Long> lastSung = new HashMap<>();
 
     public DivaModifier() {
         super("diva", "歌姫", Material.NOTE_BLOCK,
                 "音符ブロックを鳴らすと、半径10m の",
-                "全プレイヤー (自分含む) に 2秒間 再生を配る",
-                "(10秒に一度)");
+                "全プレイヤー (自分含む) に 45秒間",
+                "耐性 I・再生 II・発光を配る (2分30秒に一度)");
     }
 
     @Override
@@ -77,9 +79,18 @@ public final class DivaModifier extends BaseModifier {
             if (target.getLocation().distanceSquared(center) > RADIUS * RADIUS) {
                 continue;
             }
-            target.addPotionEffect(new PotionEffect(
-                    PotionEffectType.REGENERATION, DURATION_TICKS, AMPLIFIER));
+            for (PotionEffect effect : song()) {
+                target.addPotionEffect(effect);
+            }
         }
+    }
+
+    /** 1 回の歌で配る効果。 */
+    static List<PotionEffect> song() {
+        return List.of(
+                new PotionEffect(PotionEffectType.RESISTANCE, DURATION_TICKS, RESISTANCE_AMPLIFIER),
+                new PotionEffect(PotionEffectType.REGENERATION, DURATION_TICKS, REGENERATION_AMPLIFIER),
+                new PotionEffect(PotionEffectType.GLOWING, DURATION_TICKS, GLOWING_AMPLIFIER));
     }
 
     /** バニラがその操作で音符ブロックを鳴らすか。 */
