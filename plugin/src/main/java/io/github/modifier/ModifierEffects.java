@@ -254,6 +254,11 @@ public final class ModifierEffects implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onConsume(PlayerItemConsumeEvent event) {
         Player player = event.getPlayer();
+        // 復活剤は一度きりの効果を新品に戻す。戻せないときは食べない
+        if (RevivalItem.isRevival(event.getItem())) {
+            RevivalItem.consume(player, active(player), store, event);
+            return;
+        }
         // シェフの料理は、食べた人が何を選んでいようと効く
         ChefModifier.serve(player, event.getItem(), random);
         active(player).ifPresent(modifier -> modifier.onConsume(player, event));

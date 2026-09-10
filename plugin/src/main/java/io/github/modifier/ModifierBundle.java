@@ -222,6 +222,11 @@ public final class ModifierBundle implements Modifier {
     }
 
     @Override
+    public boolean usesCharge() {
+        return parts.stream().anyMatch(Modifier::usesCharge);
+    }
+
+    @Override
     public boolean interceptDeath(Player self, EntityDamageEvent event) {
         for (Modifier part : parts) {
             if (part.interceptDeath(self, event)) {

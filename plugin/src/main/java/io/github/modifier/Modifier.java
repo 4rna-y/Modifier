@@ -81,6 +81,15 @@ public interface Modifier {
     int DEFAULT_WEIGHT = 8;
 
     /**
+     * 一度きりの効果 (蘇生など) を持つか。
+     *
+     * <p>復活剤はこれが真のモディファイアにだけ効く。よくばりは中身のどれかが真なら真。
+     */
+    default boolean usesCharge() {
+        return false;
+    }
+
+    /**
      * アイコンに使う {@code minecraft:item_model} のキー。
      *
      * <p>リソースパック側に {@code assets/modifier/items/choice/<id>.json} を置くと反映される。

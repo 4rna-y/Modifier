@@ -118,6 +118,11 @@ public final class SelectionStore {
         player.getPersistentDataContainer().set(CHARGE_USED, PersistentDataType.BOOLEAN, true);
     }
 
+    /** 一度きりの効果を新品に戻す (復活剤)。 */
+    public void restoreCharge(Player player) {
+        player.getPersistentDataContainer().remove(CHARGE_USED);
+    }
+
     /**
      * 主ワールドの UID。ワールドを作り直すと変わるので、選び直しの判定に使える。
      *

@@ -23,6 +23,11 @@ public final class SneerModifier extends BaseModifier {
     }
 
     @Override
+    public boolean usesCharge() {
+        return true;
+    }
+
+    @Override
     public int weight() {
         // 死を打ち消すが、対象は自分の死で、本人は効果を知っている。無キャより軽い。
         return 2;
