@@ -47,6 +47,7 @@ config を差し替えたとき) は、その id を添えて知らせる。
 - `select` — 選択画面を開く (動作確認用)
 - `reload` — `config.yml` を再読み込み
 - `revival [player]` — モディファイア復活剤を渡す (動作確認用。本来は RaidEvent の L7/L8 の目玉枠)
+- `ticket [player]` — モディファイアリセットチケットを渡す (動作確認用。本来は RaidEvent のレイド報酬)
 
 ## 開発
 
@@ -170,7 +171,8 @@ UID でも判定することで、プレイヤーデータが残る構成でも�
 道具をもらえるものは、`Modifier#startingItems()` に素材と個数 (`StartingItems.Item`) を返す。
 **選択を確定した瞬間に一度だけ**持ち物へ入れ (`SelectionListener#choose` → `StartingItems#give`)、
 入り切らなければ足元に落とす。参加やリスポーンでは配り直さない。`/m select` で選び直せば、
-そのたびにもらえる (管理用なので気にしない)。
+そのたびにもらえる (管理用なので気にしない)。**リセットチケットでの選び直しでは配らない** —
+誰でも使えるので、配ると使うたびに装備を増やせてしまう (`SelectionService#reselect(player, false)`)。
 
 選択画面の説明と `/m` の出力には「受け取る道具: 盾」のような行が自動で添えられる。
 名前は翻訳キーで組むので、クライアントの言語で出る。
@@ -400,6 +402,24 @@ id を選択と一緒に PDC (`modifier:bundle`) へ保存する。効果を配�
 
 出どころは RaidEvent の L7/L8 のマジカルクレートの目玉枠 (`custom: modifier_revival`)。RaidEvent 側の `CustomItems` が同じ土台と印で作るので、
 土台や印を変えるときは両方を直すこと。`/m revival` は動作確認用。
+
+### モディファイアリセットチケット
+
+紙を土台にしたチャージ式のアイテム (`ResetTicket`、PDC `modifier:item = reset_ticket`)。
+**長押しで 3 秒チャージしきると、モディファイアを選び直せる** (`SelectionService#reselect`)。
+3 択はその場で引き直し。まだ選んでいなければ何も起きず、チケットも減らない。
+
+長押しにしてあるのは、選び直しが取り返しのつかない操作だから。`reselect` は画面を開く時点で
+今の選択を捨てるので (`selection.force: true` なら閉じても選ぶまで開き直る)、右クリック 1 回だと
+誤爆が事故になる。消費は `PlayerItemConsumeEvent` を打ち切って自前で 1 枚減らす —
+素通しすると選び直せなかったときにも減る。
+
+選び直した先の**開始アイテムは配らない**。配ると、チケットを使うたびにモディファイアごとの装備を
+増やせてしまう。`/m select` (管理者) は今まで通り配る。
+
+出どころは RaidEvent の `extra-drops` (クレートの種類に依らない追加報酬、`custom: modifier_reset_ticket`)。
+RaidEvent 側の `CustomItems` が同じ土台と印で作るので、土台・印・チャージ秒を変えるときは
+両方を直すこと (`CrossPluginItemsTest` が値を固定している)。`/m ticket` は動作確認用。
 
 ### 死神ルーレットの効果音
 

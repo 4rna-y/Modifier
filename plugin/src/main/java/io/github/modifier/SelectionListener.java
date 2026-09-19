@@ -126,8 +126,11 @@ public final class SelectionListener implements Listener {
         modifier.onChosen(player);
         effects.apply(player);
         SelectionGuard.release(player);
-        // 道具をもらえるものは、この一度だけ配る。よくばりなら中身のぶんも
-        StartingItems.give(player, modifier.resolveFor(player).startingItems());
+        // 道具をもらえるものは、この一度だけ配る。よくばりなら中身のぶんも。
+        // リセットチケットでの選び直しでは配らない (使うたびに装備を増やせてしまう)
+        if (!selection.consumeSkipStartingItems(player.getUniqueId())) {
+            StartingItems.give(player, modifier.resolveFor(player).startingItems());
+        }
         // ウェルカムギフトはこのワールドで初めて選んだときだけ。選び直しでは配らない
         if (!store.welcomedHere(player)) {
             WelcomeGift.give(player, random);
@@ -188,7 +191,7 @@ public final class SelectionListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         awaitingOpen.remove(event.getPlayer().getUniqueId());
-        selection.forget(event.getPlayer().getUniqueId());
+        selection.forgetAll(event.getPlayer().getUniqueId());
         // 無敵のまま保存させない。次に参加したときにまた守る
         SelectionGuard.release(event.getPlayer());
     }

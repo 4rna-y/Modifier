@@ -1,9 +1,11 @@
 package io.github.modifier;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 import net.kyori.adventure.text.Component;
@@ -26,6 +28,14 @@ public final class SelectionService {
      * 覚えていないと画面を閉じ直すだけで引き直せてしまう。
      */
     private final Map<UUID, List<Modifier>> offers = new HashMap<>();
+    /**
+     * 次の選択確定で開始アイテムを配らない人。
+     *
+     * <p>リセットチケットでの選び直し用。配ってしまうと、チケットを使うたびに
+     * モディファイアごとの装備 (地雷系の弓など) を増やせてしまう。
+     * {@code /m select} (管理者) は今まで通り配る。
+     */
+    private final Set<UUID> skipStartingItems = new HashSet<>();
     /** 選択肢の抽選。テストから固定できるよう受け取る。 */
     private final Random random;
 
@@ -46,11 +56,40 @@ public final class SelectionService {
      * クリックしても確定処理が走らない。
      */
     public void reselect(Player player) {
+        reselect(player, true);
+    }
+
+    /**
+     * 選択をやり直す。
+     *
+     * @param giveStartingItems 選び直した先の開始アイテムを配るか。
+     *     リセットチケット経由は false (使うたびに装備を増やせてしまうため)
+     */
+    public void reselect(Player player, boolean giveStartingItems) {
         store.clear(player);
         // 選択が無くなったので、掛かっていた常時効果がここで外れる
         effects.apply(player);
         forget(player.getUniqueId());
+        markStartingItems(player.getUniqueId(), giveStartingItems);
         open(player);
+    }
+
+    /** 次の選択確定で開始アイテムを配るかどうかを覚える。 */
+    void markStartingItems(UUID playerId, boolean give) {
+        if (give) {
+            skipStartingItems.remove(playerId);
+        } else {
+            skipStartingItems.add(playerId);
+        }
+    }
+
+    /**
+     * 今回の選択確定で開始アイテムを飛ばすか。1 回読んだら忘れる。
+     *
+     * <p>覚えたままにすると、次に {@code /m select} で選び直したときまで配られなくなる。
+     */
+    public boolean consumeSkipStartingItems(UUID playerId) {
+        return skipStartingItems.remove(playerId);
     }
 
     /** 選択画面を開く。すでに提示済みなら同じ選択肢を出す。 */
@@ -71,6 +110,12 @@ public final class SelectionService {
     /** 提示済みの選択肢を忘れる。次に開くときは引き直しになる。 */
     public void forget(UUID playerId) {
         offers.remove(playerId);
+    }
+
+    /** 退出したので、選び直しの途中だった記録ごと捨てる。 */
+    public void forgetAll(UUID playerId) {
+        offers.remove(playerId);
+        skipStartingItems.remove(playerId);
     }
 
     private int choiceCount() {

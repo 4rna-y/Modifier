@@ -26,7 +26,8 @@ import org.jetbrains.annotations.NotNull;
  */
 public final class ModifierCommand implements BasicCommand {
 
-    private static final List<String> ADMIN_SUB_COMMANDS = List.of("status", "select", "reload", "revival");
+    private static final List<String> ADMIN_SUB_COMMANDS =
+            List.of("status", "select", "reload", "revival", "ticket");
 
     private final ModifierPlugin plugin;
 
@@ -64,7 +65,12 @@ public final class ModifierCommand implements BasicCommand {
             }
             case "revival" -> {
                 if (requireAdmin(sender)) {
-                    giveRevival(sender, args);
+                    give(sender, args, RevivalItem.create(1), "モディファイア復活剤");
+                }
+            }
+            case "ticket" -> {
+                if (requireAdmin(sender)) {
+                    give(sender, args, ResetTicket.create(1), "モディファイアリセットチケット");
                 }
             }
             case "reload" -> {
@@ -74,34 +80,34 @@ public final class ModifierCommand implements BasicCommand {
                 }
             }
             default -> sender.sendMessage(plugin.message(sender.hasPermission("modifier.admin")
-                    ? "<red>使い方: /m [status|select|reload|revival [player]]"
+                    ? "<red>使い方: /m [status|select|reload|revival [player]|ticket [player]]"
                     : "<red>使い方: /m (自分のモディファイアを表示)"));
         }
     }
 
-    // ------------------------------------------------------------------ 引数なし
-
-    /** 自分が選んだモディファイアの効果を本人へ送る。 */
-    /** 復活剤を渡す (動作確認用。本来はレイドの報酬)。 */
-    private void giveRevival(CommandSender sender, String[] args) {
-        org.bukkit.entity.Player target;
+    /** 特別なアイテムを渡す (動作確認用。本来はレイドの報酬)。 */
+    private void give(CommandSender sender, String[] args, ItemStack item, String label) {
+        Player target;
         if (args.length >= 2) {
             target = plugin.getServer().getPlayerExact(args[1]);
             if (target == null) {
                 sender.sendMessage(plugin.message("<red>オンラインに居ない: " + args[1]));
                 return;
             }
-        } else if (sender instanceof org.bukkit.entity.Player self) {
+        } else if (sender instanceof Player self) {
             target = self;
         } else {
             sender.sendMessage(plugin.message("<red>プレイヤー名が要る。"));
             return;
         }
-        target.getInventory().addItem(RevivalItem.create(1)).values()
+        target.getInventory().addItem(item).values()
                 .forEach(rest -> target.getWorld().dropItemNaturally(target.getLocation(), rest));
-        sender.sendMessage(plugin.message("<green>" + target.getName() + " にモディファイア復活剤を渡した。"));
+        sender.sendMessage(plugin.message("<green>" + target.getName() + " に" + label + "を渡した。"));
     }
 
+    // ------------------------------------------------------------------ 引数なし
+
+    /** 自分が選んだモディファイアの効果を本人へ送る。 */
     private void showSelection(CommandSender sender) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(plugin.message("<red>プレイヤーが実行してください。"));
